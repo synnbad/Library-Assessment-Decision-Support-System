@@ -168,6 +168,22 @@ Uses **DistilBERT** from Hugging Face - a lightweight, open-source sentiment ana
 - Free to use
 - ~87% accuracy on test datasets
 
+##  Niche Use Cases & Datasets
+
+This sentiment analysis application can be adapted for various specialized domains beyond general customer support. Explore:
+
+- **[Niche Use Cases Guide](NICHE_USE_CASES.md)**: Detailed documentation of 10+ specialized domains including healthcare, finance, education, legal, and more
+- **[Datasets Reference](DATASETS_REFERENCE.md)**: Comprehensive list of publicly available datasets for training domain-specific models
+
+Learn how to adapt this application for:
+- 🏥 Healthcare patient feedback triage
+- 💰 Financial services and fraud detection
+- 🎓 Educational support systems
+- ⚖️ Legal inquiry classification
+- 👥 HR and employee feedback analysis
+- 🛍️ E-commerce review analysis
+- And many more specialized applications
+
 ##  License
 
 This is a practice project for educational purposes.
