@@ -1,7 +1,7 @@
 """
-Sentiment Analysis - Intent Triage
+Library Feedback Sentiment Analysis
 
-A tool that classifies text messages as questions, comments, or complaints.
+Classifies student library feedback as positive, neutral, or negative.
 """
 
 __version__ = "1.0.0"

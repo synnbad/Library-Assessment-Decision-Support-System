@@ -1,5 +1,5 @@
 """
-Configuration settings for the sentiment analysis service.
+Configuration settings for the library feedback sentiment analysis service.
 
 This module handles all configuration for the application, loading values from
 environment variables with sensible defaults.
@@ -35,9 +35,9 @@ class Config:
     # Minimum confidence percentage before flagging for human review
     CONFIDENCE_THRESHOLD = int(os.getenv("CONFIDENCE_THRESHOLD", 70))
     
-    # Intent labels
-    # The three categories we classify messages into
-    INTENT_LABELS = ["question", "comment", "complaint"]
+    # Sentiment labels
+    # The three sentiment categories for student library feedback
+    SENTIMENT_LABELS = ["positive", "neutral", "negative"]
     
     def __init__(self):
         """Initialize configuration and validate settings."""

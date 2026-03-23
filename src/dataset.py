@@ -106,7 +106,7 @@ def validate_dataset(dataset: List[Dict]) -> bool:
             logger.error(f"Example {i} missing 'label' field")
             return False
         
-        if example['label'] not in ['question', 'comment', 'complaint']:
+        if example['label'] not in ['positive', 'neutral', 'negative']:
             logger.warning(f"Example {i} has unexpected label: {example['label']}")
     
     logger.info(f"Dataset validation passed: {len(dataset)} examples")

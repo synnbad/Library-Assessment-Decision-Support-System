@@ -163,18 +163,18 @@ textarea:focus {
     text-transform: capitalize;
 }
 
-/* Color-coding for different label types */
-.label-badge.question {
+/* Color-coding for sentiment labels */
+.label-badge.positive {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.label-badge.neutral {
     background: #e3f2fd;
-    color: #1976d2;
+    color: #1565c0;
 }
 
-.label-badge.comment {
-    background: #f3e5f5;
-    color: #7b1fa2;
-}
-
-.label-badge.complaint {
+.label-badge.negative {
     background: #ffebee;
     color: #c62828;
 }

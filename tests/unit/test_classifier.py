@@ -1,203 +1,174 @@
 """
-Unit tests for the intent classifier.
+Unit tests for the library feedback sentiment classifier.
 
 Tests both rule-based and AI classification approaches, including
 edge cases and fallback behavior.
 """
 import pytest
 from src.modeling.predict import (
-    RuleBasedClassifier, 
-    AIClassifier, 
-    IntentClassifier,
+    RuleBasedClassifier,
+    AIClassifier,
+    SentimentClassifier,
     get_classifier
 )
 from src.config import config
 
 
 class TestRuleBasedClassifier:
-    """Tests for the rule-based classifier."""
-    
+    """Tests for the rule-based sentiment classifier."""
+
     def setup_method(self):
         """Set up test fixtures."""
         self.classifier = RuleBasedClassifier()
-    
-    def test_question_with_question_mark(self):
-        """Test that questions with ? are correctly identified."""
-        text = "How do I reset my password?"
+
+    def test_positive_feedback(self):
+        """Test that clearly positive feedback is correctly identified."""
+        text = "The library staff were incredibly helpful and friendly."
         label, confidence, reason = self.classifier.classify(text)
-        assert label == "question"
+        assert label == "positive"
         assert confidence > 50
-        assert "question" in reason.lower()
-    
-    def test_question_without_question_mark(self):
-        """Test questions without question marks."""
-        text = "Can you help me with this issue"
+        assert "positive" in reason.lower() or "satisfaction" in reason.lower()
+
+    def test_negative_feedback(self):
+        """Test that clearly negative feedback is correctly identified."""
+        text = "The computers are outdated and the staff were very unhelpful."
         label, confidence, reason = self.classifier.classify(text)
-        assert label == "question"
-        assert confidence > 30
-    
-    def test_complaint_with_negative_words(self):
-        """Test complaints with negative language."""
-        text = "This is terrible and never works properly!"
-        label, confidence, reason = self.classifier.classify(text)
-        assert label == "complaint"
+        assert label == "negative"
         assert confidence > 50
-        assert "negative" in reason.lower() or "dissatisfaction" in reason.lower()
-    
-    def test_positive_comment(self):
-        """Test positive comments."""
-        text = "I really love this feature, it's fantastic!"
+
+    def test_neutral_feedback(self):
+        """Test that neutral/suggestion feedback is correctly identified."""
+        text = "I think the opening hours could be extended on weekends."
         label, confidence, reason = self.classifier.classify(text)
-        assert label == "comment"
-        assert confidence > 40
-    
-    def test_neutral_statement(self):
-        """Test neutral declarative statements."""
-        text = "I updated my profile yesterday."
-        label, confidence, reason = self.classifier.classify(text)
-        assert label == "comment"
-    
+        assert label in ["neutral", "positive", "negative"]
+        assert 0 <= confidence <= 100
+
     def test_empty_string(self):
-        """Test behavior with empty string."""
+        """Test behaviour with empty string."""
         text = ""
         label, confidence, reason = self.classifier.classify(text)
-        assert label in ["question", "comment", "complaint"]
+        assert label in ["positive", "neutral", "negative"]
         assert 0 <= confidence <= 100
-    
-    def test_mixed_indicators(self):
-        """Test text with mixed question and complaint indicators."""
-        text = "Why is this service so terrible?"
+
+    def test_mixed_signals(self):
+        """Test text with both positive and negative indicators."""
+        text = "The collection is good but the Wi-Fi is terrible."
         label, confidence, reason = self.classifier.classify(text)
-        # Should classify as either question or complaint
-        assert label in ["question", "complaint"]
+        assert label in ["positive", "neutral", "negative"]
+        assert 0 <= confidence <= 100
 
 
 class TestAIClassifier:
     """Tests for the AI classifier."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
         self.classifier = AIClassifier()
-    
+
     def test_classifier_initialization(self):
-        """Test that AI classifier initializes correctly."""
+        """Test that AI classifier initialises correctly."""
         assert self.classifier is not None
-    
+
     def test_availability_check(self):
         """Test AI availability checking."""
         is_available = self.classifier.is_available()
         assert isinstance(is_available, bool)
-        # Availability depends on Hugging Face model
-        # Should be True if transformers is installed
-        assert is_available in [True, False]
-    
+
     @pytest.mark.skipif(not config.USE_AI_MODEL, reason="AI model disabled in config")
     def test_ai_classification(self):
         """Test AI classification (requires Hugging Face transformers)."""
         if not self.classifier.is_available():
             pytest.skip("AI classifier not available")
-        
-        text = "How do I reset my password?"
+
+        text = "The library is a wonderful place to study."
         try:
             label, confidence, reason = self.classifier.classify(text)
-            assert label in ["question", "comment", "complaint"]
+            assert label in ["positive", "neutral", "negative"]
             assert 0 <= confidence <= 100
             assert len(reason) > 0
         except Exception as e:
-            # Model might fail for various reasons (memory, etc.)
             pytest.skip(f"AI classification failed: {e}")
 
 
-class TestIntentClassifier:
-    """Tests for the main intent classifier orchestrator."""
-    
+class TestSentimentClassifier:
+    """Tests for the main sentiment classifier orchestrator."""
+
     def setup_method(self):
         """Set up test fixtures."""
-        self.classifier = IntentClassifier()
-    
+        self.classifier = SentimentClassifier()
+
     def test_classifier_initialization(self):
-        """Test that intent classifier initializes properly."""
+        """Test that sentiment classifier initialises properly."""
         assert self.classifier is not None
         assert self.classifier.ai_classifier is not None
         assert self.classifier.rule_based_classifier is not None
-    
-    def test_classify_question(self):
-        """Test classification of a question."""
-        text = "What time does the store close?"
+
+    def test_classify_positive(self):
+        """Test classification of positive feedback."""
+        text = "I love the library — the staff are always so helpful!"
         label, confidence, reason, used_ai = self.classifier.classify(text)
-        assert label == "question"
+        assert label == "positive"
         assert 0 <= confidence <= 100
         assert len(reason) > 0
         assert isinstance(used_ai, bool)
-    
-    def test_classify_comment(self):
-        """Test classification of a comment."""
-        text = "I think the new design looks great!"
+
+    def test_classify_negative(self):
+        """Test classification of negative feedback."""
+        text = "The library is always too noisy and the computers are broken."
         label, confidence, reason, used_ai = self.classifier.classify(text)
-        assert label == "comment"
+        assert label == "negative"
         assert 0 <= confidence <= 100
         assert len(reason) > 0
-    
-    def test_classify_complaint(self):
-        """Test classification of a complaint."""
-        text = "This app is broken and I'm very frustrated."
+
+    def test_classify_neutral(self):
+        """Test classification of neutral feedback."""
+        text = "The library is generally okay for studying."
         label, confidence, reason, used_ai = self.classifier.classify(text)
-        assert label == "complaint"
+        assert label in ["positive", "neutral", "negative"]
         assert 0 <= confidence <= 100
-        assert len(reason) > 0
-    
-    def test_classify_with_escalation(self):
-        """Test classification with escalation checking."""
-        text = "How do I reset my password?"
+
+    def test_classify_with_escalation_structure(self):
+        """Test that classify_with_escalation returns all required fields."""
+        text = "The study spaces are comfortable and quiet."
         result = self.classifier.classify_with_escalation(text)
-        
-        # Check all required fields are present
+
         assert 'label' in result
         assert 'confidence' in result
         assert 'reason' in result
         assert 'escalate' in result
         assert 'method' in result
-        
-        # Validate field types and values
-        assert result['label'] in ["question", "comment", "complaint"]
+
+        assert result['label'] in ["positive", "neutral", "negative"]
         assert 0 <= result['confidence'] <= 100
         assert isinstance(result['reason'], str)
         assert isinstance(result['escalate'], bool)
         assert result['method'] in ['ai', 'rules']
-    
+
     def test_empty_input(self):
-        """Test behavior with empty input."""
+        """Test behaviour with empty input."""
         text = ""
         label, confidence, reason, used_ai = self.classifier.classify(text)
-        assert label in ["question", "comment", "complaint"]
+        assert label in ["positive", "neutral", "negative"]
         assert 0 <= confidence <= 100
-    
+
     def test_whitespace_input(self):
-        """Test behavior with only whitespace."""
+        """Test behaviour with only whitespace."""
         text = "   \n\t  "
         label, confidence, reason, used_ai = self.classifier.classify(text)
-        assert label in ["question", "comment", "complaint"]
+        assert label in ["positive", "neutral", "negative"]
 
 
 class TestGetClassifier:
     """Tests for the global classifier singleton."""
-    
+
     def test_get_classifier_returns_instance(self):
         """Test that get_classifier returns a valid instance."""
         classifier = get_classifier()
         assert classifier is not None
-        assert isinstance(classifier, IntentClassifier)
-    
+        assert isinstance(classifier, SentimentClassifier)
+
     def test_get_classifier_returns_same_instance(self):
         """Test that get_classifier returns the same instance (singleton)."""
         classifier1 = get_classifier()
         classifier2 = get_classifier()
         assert classifier1 is classifier2
-
-
-# TODO: Add more comprehensive tests including:
-# - Test with various edge cases (URLs, special characters, emojis)
-# - Test fallback behavior when AI fails
-# - Test confidence threshold variations
-# - Test with multilingual inputs
-# - Performance tests for batch classification

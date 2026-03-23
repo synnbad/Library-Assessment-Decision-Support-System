@@ -1,7 +1,7 @@
 """
-FastAPI service for sentiment analysis intent triage.
+FastAPI service for library student feedback sentiment analysis.
 
-This module provides the REST API service for classification operations.
+This module provides the REST API service for sentiment classification operations.
 It defines all API endpoints and configures the FastAPI application with
 middleware and static file serving.
 """
@@ -25,8 +25,8 @@ __version__ = "1.0.0"
 
 # Initialize FastAPI application with metadata
 app = FastAPI(
-    title="Sentiment Analysis - Intent Triage",
-    description="A tool that classifies text as question, comment, or complaint",
+    title="Library Feedback Sentiment Analysis",
+    description="Classifies student library feedback as positive, neutral, or negative",
     version=__version__
 )
 
@@ -64,7 +64,7 @@ async def root():
     Returns a welcome message directing users to the demo page.
     """
     return {
-        "name": "Sentiment Analysis API",
+        "name": "Library Feedback Sentiment Analysis API",
         "version": __version__,
         "status": "running",
         "demo": "/static/index.html",
@@ -93,17 +93,17 @@ async def health_check():
 @app.post("/classify", response_model=ClassificationResponse, tags=["Classification"])
 async def classify_text(request: ClassificationRequest):
     """
-    Classify text as question, comment, or complaint.
-    
-    This is the main classification endpoint. It accepts text input and returns
-    the predicted intent along with confidence metrics and reasoning.
-    
+    Classify student library feedback sentiment.
+
+    This is the main classification endpoint. It accepts feedback text and returns
+    the predicted sentiment along with confidence metrics and reasoning.
+
     Args:
-        request: ClassificationRequest containing the text to classify
-    
+        request: ClassificationRequest containing the feedback text to classify
+
     Returns:
         ClassificationResponse: Contains:
-            - label: The classification (question/comment/complaint)
+            - label: The sentiment (positive/neutral/negative)
             - confidence: How sure the model is (0-100%)
             - reason: Brief explanation for the classification
             - escalate: Whether human review is needed (true if confidence < threshold)

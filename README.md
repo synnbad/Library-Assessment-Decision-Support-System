@@ -1,114 +1,105 @@
-# Sentiment Analysis - Intent Triage
+# Library Feedback Sentiment Analysis
 
-A lightweight web interface that classifies text messages as **Question**, **Comment**, or **Complaint** using AI and a rule-based classification system.
+A machine learning system that automatically classifies student library feedback as **Positive**, **Neutral**, or **Negative** to help academic libraries identify trends and improve services.
 
-##  What It Does
+## Problem & Objective
 
-- Accepts any text input
-- Returns a classification label (question/comment/complaint)
-- Provides a confidence score (0-100%)
+Academic libraries collect large amounts of student feedback through surveys, comments, and reviews. Manually analysing this feedback is time-consuming and difficult to scale.
+
+This project develops a model that automatically classifies the sentiment of student feedback so libraries can quickly identify trends and act on them.
+
+**Key Question:** Can machine learning accurately predict student sentiment toward library services?
+
+## What It Does
+
+- Accepts student feedback text (survey responses, comments, reviews)
+- Returns a sentiment label: **positive**, **neutral**, or **negative**
+- Provides a confidence score (0–100%)
 - Gives a brief explanation for the classification
 - Flags low-confidence results for human review
 
-##  Project Structure
+## Project Structure
 
 ```
 sentiment-analysis/
-├── backend/              # FastAPI backend service
-│   ├── __init__.py
-│   ├── main.py          # Main API application
-│   ├── config.py        # Configuration settings
-│   └── models.py        # Pydantic data models
-├── frontend/            # Demo web interface
-│   ├── index.html       # Main page
-│   ├── styles.css       # Styling
-│   └── app.js           # JavaScript logic
-├── tests/               # Unit and integration tests
-├── data/                # Test datasets
-├── requirements.txt     # Python dependencies
-├── .env.example        # Environment variables template
-└── README.md           # This file
+├── src/
+│   ├── config.py            # Configuration settings
+│   ├── dataset.py           # Dataset loading and validation utilities
+│   ├── models.py            # Pydantic request/response models
+│   ├── modeling/
+│   │   ├── predict.py       # Sentiment classification engine
+│   │   └── train.py         # Training pipeline (placeholder)
+│   └── services/
+│       └── api.py           # FastAPI application and endpoints
+├── scripts/
+│   ├── run_demo.py          # Interactive demo
+│   └── evaluate_model.py    # Evaluation script with accuracy metrics
+├── data/
+│   └── raw/
+│       └── library_feedback.json   # Labelled library feedback dataset
+├── reports/web-demo/        # Web interface for live demo
+├── tests/                   # Unit and integration tests
+├── requirements.txt
+└── .env.example
 ```
 
-##  Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- pip (Python package manager)
+- Python 3.8+
+- pip
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd sentiment-analysis
-   ```
-
-2. **Create a virtual environment**
+1. Create and activate a virtual environment:
    ```bash
    python -m venv venv
+   # Windows
+   venv\Scripts\activate
+   # Mac/Linux
+   source venv/bin/activate
    ```
 
-3. **Activate the virtual environment**
-   - Windows (PowerShell):
-     ```powershell
-     .\venv\Scripts\Activate.ps1
-     ```
-   - Windows (Command Prompt):
-     ```cmd
-     venv\Scripts\activate.bat
-     ```
-   - Mac/Linux:
-     ```bash
-     source venv/bin/activate
-     ```
-
-4. **Install dependencies**
+2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-5. **Set up environment variables (optional)**
+3. Copy the environment file:
    ```bash
    copy .env.example .env
    ```
-   Edit `.env` to customize settings like confidence threshold.
 
-### Running the Application
+### Running the API
 
-1. **Start the server**
-   ```bash
-   python -m backend.main
-   ```
-   Or use uvicorn directly:
-   ```bash
-   uvicorn backend.main:app --reload
-   ```
+```bash
+uvicorn src.services.api:app --reload
+```
 
-2. **Open the demo page**
-   - Navigate to: `http://localhost:8000/static/index.html`
-   - Or use the API directly: `http://localhost:8000/docs` (Swagger UI)
+Then open:
+- Web demo: `http://localhost:8000/static/index.html`
+- API docs: `http://localhost:8000/docs`
 
-##  API Usage
+## API Usage
 
-### Classify Text
+### Classify Feedback
 
 **Endpoint:** `POST /classify`
 
 **Request:**
 ```json
 {
-  "text": "How do I reset my password?"
+  "text": "The library staff were incredibly helpful with my research."
 }
 ```
 
 **Response:**
 ```json
 {
-  "label": "question",
-  "confidence": 95.0,
-  "reason": "Text contains interrogative words and seeks information",
+  "label": "positive",
+  "confidence": 91.5,
+  "reason": "Expresses satisfaction with library services ('helpful')",
   "escalate": false
 }
 ```
@@ -117,65 +108,51 @@ sentiment-analysis/
 
 **Endpoint:** `GET /health`
 
-**Response:**
-```json
-{
-  "status": "healthy",
-  "version": "1.0.0",
-  "ai_model_available": true
-}
-```
-
-##  Running Tests
+## Running Tests
 
 ```bash
 pytest tests/
 ```
 
-For coverage:
+## Running the Demo
+
 ```bash
-pytest tests/ --cov=backend
+python scripts/run_demo.py
 ```
 
-##  Development Status
+## Evaluation
 
-**Current Version:** v1.0  
-**Week 1:**  Project structure and basic setup  
-**Week 2:**  Classification logic and testing (in progress)  
-**Week 3:**  Demo and refinement (upcoming)
+```bash
+python scripts/evaluate_model.py
+```
 
-##  Configuration
+## Configuration
 
-Edit `.env` file to customize:
+Edit `.env` to customise:
 
-- `USE_AI_MODEL`: Set to `true` to use AI (Hugging Face), `false` for rule-based only
+- `USE_AI_MODEL`: `true` to use Hugging Face DistilBERT, `false` for rule-based only
 - `CONFIDENCE_THRESHOLD`: Minimum confidence % before escalation (default: 70)
-- `HOST`: Server host (default: 0.0.0.0)
-- `PORT`: Server port (default: 8000)
+- `HOST` / `PORT`: Server settings
 
-##  Tech Stack
+## Tech Stack
 
 - **Backend:** FastAPI, Python 3.8+
 - **AI/ML:** Hugging Face Transformers (DistilBERT), PyTorch
 - **Frontend:** HTML, CSS, Vanilla JavaScript
 - **Testing:** pytest
 
-##  AI Model
+## AI Model
 
-Uses **DistilBERT** from Hugging Face - a lightweight, open-source sentiment analysis model that:
-- Runs locally (no API key needed)
+Uses **DistilBERT** (`distilbert-base-uncased-finetuned-sst-2-english`) from Hugging Face:
+- Runs locally — no API key needed
 - Works offline
 - Free to use
-- ~87% accuracy on test datasets
+- Binary POSITIVE/NEGATIVE output mapped to positive/neutral/negative using confidence thresholds
 
-##  License
-
-This is a practice project for educational purposes.
-
-##  Author
+## Author
 
 Sinbad Adjuik
 
 ---
 
-**Note:** This is v1.0 - a minimal viable product for learning and demonstration purposes.
+*Library Assessment Project — v1.0*

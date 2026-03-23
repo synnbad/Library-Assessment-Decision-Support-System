@@ -1,0 +1,182 @@
+[
+  {
+    "text": "The library staff were incredibly helpful when I needed research assistance.",
+    "label": "positive"
+  },
+  {
+    "text": "I love how quiet and comfortable the study spaces are.",
+    "label": "positive"
+  },
+  {
+    "text": "The online catalogue is easy to use and well organised.",
+    "label": "positive"
+  },
+  {
+    "text": "Really appreciate the extended opening hours during exam season.",
+    "label": "positive"
+  },
+  {
+    "text": "The librarians are always friendly and knowledgeable.",
+    "label": "positive"
+  },
+  {
+    "text": "Great selection of academic journals and e-books available.",
+    "label": "positive"
+  },
+  {
+    "text": "The new group study rooms are fantastic — exactly what we needed.",
+    "label": "positive"
+  },
+  {
+    "text": "I found all the resources I needed for my dissertation. Very impressed.",
+    "label": "positive"
+  },
+  {
+    "text": "The self-checkout system is quick and convenient.",
+    "label": "positive"
+  },
+  {
+    "text": "Excellent printing facilities and very affordable rates.",
+    "label": "positive"
+  },
+  {
+    "text": "The library is always clean and well maintained.",
+    "label": "positive"
+  },
+  {
+    "text": "Staff helped me locate a rare book I needed. Outstanding service.",
+    "label": "positive"
+  },
+  {
+    "text": "The interlibrary loan service is brilliant — got my book within two days.",
+    "label": "positive"
+  },
+  {
+    "text": "Really enjoy studying here. The atmosphere is perfect for concentration.",
+    "label": "positive"
+  },
+  {
+    "text": "The digital resources available are comprehensive and up to date.",
+    "label": "positive"
+  },
+  {
+    "text": "The library is generally okay for studying.",
+    "label": "neutral"
+  },
+  {
+    "text": "I think the opening hours could be extended on weekends.",
+    "label": "neutral"
+  },
+  {
+    "text": "The collection is decent but could use more recent editions.",
+    "label": "neutral"
+  },
+  {
+    "text": "It would be nice to have more power outlets near the study desks.",
+    "label": "neutral"
+  },
+  {
+    "text": "The library is fine for most of my needs.",
+    "label": "neutral"
+  },
+  {
+    "text": "Sometimes the Wi-Fi is a bit slow but it usually works.",
+    "label": "neutral"
+  },
+  {
+    "text": "I noticed the periodicals section hasn't been updated in a while.",
+    "label": "neutral"
+  },
+  {
+    "text": "The booking system for study rooms is straightforward enough.",
+    "label": "neutral"
+  },
+  {
+    "text": "Overall the library meets my basic requirements.",
+    "label": "neutral"
+  },
+  {
+    "text": "The catalogue could be more intuitive but it gets the job done.",
+    "label": "neutral"
+  },
+  {
+    "text": "Maybe more seating options would help during busy periods.",
+    "label": "neutral"
+  },
+  {
+    "text": "The library is adequate for undergraduate research.",
+    "label": "neutral"
+  },
+  {
+    "text": "I feel the signage could be clearer to help new students navigate.",
+    "label": "neutral"
+  },
+  {
+    "text": "The printing service works but the queue can be long at peak times.",
+    "label": "neutral"
+  },
+  {
+    "text": "The library is okay, though I wish there were more silent study zones.",
+    "label": "neutral"
+  },
+  {
+    "text": "The library is always too noisy to study in.",
+    "label": "negative"
+  },
+  {
+    "text": "Very disappointed — the book I reserved was not available when I arrived.",
+    "label": "negative"
+  },
+  {
+    "text": "The computers are outdated and extremely slow.",
+    "label": "negative"
+  },
+  {
+    "text": "Staff were unhelpful and dismissive when I asked for assistance.",
+    "label": "negative"
+  },
+  {
+    "text": "The library closes too early and I can never finish my work.",
+    "label": "negative"
+  },
+  {
+    "text": "Extremely frustrated with the overdue fine system — it is unreasonable.",
+    "label": "negative"
+  },
+  {
+    "text": "The Wi-Fi is terrible and keeps disconnecting during important sessions.",
+    "label": "negative"
+  },
+  {
+    "text": "There are never enough study spaces during exam period. Very stressful.",
+    "label": "negative"
+  },
+  {
+    "text": "The journal collection is badly out of date and missing key titles.",
+    "label": "negative"
+  },
+  {
+    "text": "I waited over a week for an interlibrary loan with no updates.",
+    "label": "negative"
+  },
+  {
+    "text": "The toilets near the reading room are always dirty and unpleasant.",
+    "label": "negative"
+  },
+  {
+    "text": "The self-checkout machines are constantly broken.",
+    "label": "negative"
+  },
+  {
+    "text": "Really unhappy with how long it takes to get a response from library support.",
+    "label": "negative"
+  },
+  {
+    "text": "The group study rooms are always booked and impossible to access.",
+    "label": "negative"
+  },
+  {
+    "text": "The library catalogue is confusing and hard to navigate.",
+    "label": "negative"
+  }
+]

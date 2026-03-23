@@ -140,10 +140,10 @@ class ClassifierEvaluator:
         # Confusion matrix
         print(f"\n[CONFUSION MATRIX] Confusion Matrix:")
         print("   " + " " * 12 + "Predicted →")
-        print("   " + " " * 12 + "Q       C       P")  # Question, Comment, comPlaint
-        labels = ['question', 'comment', 'complaint']
-        label_abbrev = {'question': 'Q', 'comment': 'C', 'complaint': 'P'}
-        
+        print("   " + " " * 12 + "+       N       -")  # Positive, Neutral, Negative
+        labels = ['positive', 'neutral', 'negative']
+        label_abbrev = {'positive': '+', 'neutral': 'N', 'negative': '-'}
+
         for true_label in labels:
             row = f"   True {label_abbrev[true_label]} ({true_label[:4]})  "
             for pred_label in labels:
@@ -180,32 +180,26 @@ class ClassifierEvaluator:
 def main():
     """Main function to run evaluation."""
     print("=" * 80)
-    print("SENTIMENT ANALYSIS - CLASSIFIER EVALUATION")
+    print("LIBRARY FEEDBACK SENTIMENT ANALYSIS - CLASSIFIER EVALUATION")
     print("=" * 80)
-    
-    # Initialize evaluator
+
     evaluator = ClassifierEvaluator()
-    
-    # Check for available datasets
+
     import os
     data_dir = Path("data/raw")
     available_datasets = []
-    
+
     if data_dir.exists():
         for file in data_dir.glob("*.json"):
-            dataset_name = file.stem
-            available_datasets.append(dataset_name)
-    
-    # Default to first available dataset if none found
+            available_datasets.append(file.stem)
+
     if not available_datasets:
-        available_datasets = ["public_mixed"]
-    
-    # Let user choose dataset
+        available_datasets = ["library_feedback"]
+
     print("\nAvailable datasets:")
     for i, name in enumerate(available_datasets, 1):
         print(f"   {i}. {name}")
-    
-    # Default to first available dataset
+
     dataset_name = available_datasets[0]
     if len(available_datasets) > 1:
         try:
@@ -216,35 +210,32 @@ def main():
                     dataset_name = available_datasets[idx]
         except (KeyboardInterrupt, EOFError):
             print(f"\n[INFO] Using default ({dataset_name})")
-    
-    # Load dataset
+
     print(f"\nLoading dataset '{dataset_name}'...")
     try:
         dataset_path = f"data/raw/{dataset_name}.json"
         dataset = evaluator.load_dataset(dataset_path)
         print(f"   Loaded {len(dataset)} examples")
-        
-        # Show distribution
+
         distribution = {}
         for example in dataset:
             label = example.get('label', 'unknown')
             distribution[label] = distribution.get(label, 0) + 1
-        
+
         print(f"\nDataset Distribution:")
         for label, count in distribution.items():
             print(f"   {label.capitalize()}: {count}")
-        
+
         print("\n[SUCCESS] Dataset loaded successfully")
-        
+
     except Exception as e:
         print(f"\n[ERROR] Error loading dataset: {e}")
         return
-    
-    # Run evaluation
+
     try:
         results = evaluator.evaluate(dataset)
         evaluator.print_report(results)
-        
+
     except Exception as e:
         print(f"\n[ERROR] Error during evaluation: {e}")
         import traceback

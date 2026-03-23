@@ -61,7 +61,7 @@ async function classifyMessage() {
  * Display the classification result in the UI
  * Updates all result elements with data from the API response
  * @param {Object} result - The classification result from the API
- * @param {string} result.label - The classification label (question/comment/complaint)
+ * @param {string} result.label - The sentiment label (positive/neutral/negative)
  * @param {number} result.confidence - Confidence score (0-100)
  * @param {string} result.reason - Explanation for the classification
  * @param {boolean} result.escalate - Whether human review is needed
