@@ -1,20 +1,38 @@
+# FERPA-Compliant RAG Decision Support System - MVP
+# Python 3.10+ required
+
 # Web Framework
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-pydantic==2.5.0
+streamlit==1.31.0
 
-# AI/ML Libraries (Open Source)
-transformers==4.35.0
-torch==2.1.0
+# AI/ML Libraries
+chromadb==0.4.22
+sentence-transformers==2.3.1  # For all-MiniLM-L6-v2 embeddings
+textblob==0.17.1  # Sentiment analysis
+scikit-learn==1.4.0  # Clustering for theme identification
 
-# Dataset Support (optional)
-datasets==2.14.6
+# LLM Integration
+ollama==0.1.6  # Ollama Python client
 
-# Utilities
-python-dotenv==1.0.0
-requests==2.31.0
+# Data Processing
+pandas==2.2.0
+numpy==1.26.3
+
+# Visualization
+plotly==5.18.0
+kaleido==0.2.1  # For static image export (PNG)
+
+# PDF Generation
+reportlab==4.0.9
+markdown==3.5.2  # For Markdown export
+
+# Authentication
+bcrypt==4.1.2
 
 # Testing
-pytest==7.4.3
-pytest-asyncio==0.21.1
-httpx==0.25.1
+pytest==8.0.0
+pytest-cov==4.1.0
+hypothesis==6.98.3  # Property-based testing
+
+# Development Tools
+black==24.1.1  # Code formatting
+ruff==0.2.1  # Linting

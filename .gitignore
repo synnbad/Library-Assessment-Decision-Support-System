@@ -19,11 +19,14 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Virtual Environment
 venv/
-ENV/
 env/
+ENV/
+env.bak/
+venv.bak/
 
 # IDE
 .vscode/
@@ -32,37 +35,37 @@ env/
 *.swo
 *~
 
-# Environment variables
-.env
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.hypothesis/
+
+# Data (sensitive)
+data/library.db
+data/chroma_db/
+data/*.csv
+data/*.json
+*.db
+*.db-journal
+
+# Exports
+exports/
+reports/*.pdf
+reports/*.md
+reports/*.png
 
 # Logs
-logs/
 *.log
-
-# Data
-data/raw/*.csv
-data/processed/*
-!data/processed/.gitkeep
-data/samples/*
-!data/samples/.gitkeep
-
-# Models
-models/*
-!models/.gitkeep
-!models/README.md
-
-# Hugging Face cache
-.cache/
+logs/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
+# Environment variables
+.env
+.env.local
 
-# Temporary files
-*.tmp
-*.bak
+# Streamlit
+.streamlit/secrets.toml
