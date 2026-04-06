@@ -18,12 +18,14 @@ Supported PII Types:
 - Phone numbers: 555-123-4567 (various formats)
 - Social Security Numbers: 123-45-6789
 - Student IDs: Configurable pattern
+- Street addresses: 123 Main Street, 456 Oak Avenue, etc.
 
 Redaction Placeholders:
 - [EMAIL] - Replaces email addresses
 - [PHONE] - Replaces phone numbers
 - [SSN] - Replaces Social Security Numbers
 - [STUDENT_ID] - Replaces student identifiers
+- [ADDRESS] - Replaces street addresses
 
 Module Functions:
 - detect_pii(): Find PII instances in text
@@ -148,7 +150,8 @@ def redact_pii(text: str, patterns: Dict[str, str] = None) -> Tuple[str, Dict[st
         "email": "[EMAIL]",
         "phone": "[PHONE]",
         "ssn": "[SSN]",
-        "student_id": "[STUDENT_ID]"
+        "student_id": "[STUDENT_ID]",
+        "address": "[ADDRESS]"
     }
     
     # Redact each PII type

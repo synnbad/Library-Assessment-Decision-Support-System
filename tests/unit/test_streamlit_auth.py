@@ -90,6 +90,10 @@ class TestStreamlitAuthentication:
 class TestAuthenticationFlow:
     """Test complete authentication flow."""
     
+    def setup_method(self):
+        """Clear rate limit store before each test."""
+        auth._rate_limit_store.clear()
+    
     @patch('modules.auth.execute_query')
     @patch('modules.auth.log_access')
     def test_successful_login_flow(self, mock_log, mock_query):
@@ -107,9 +111,10 @@ class TestAuthenticationFlow:
         # Initialize session state
         auth.init_session_state(session_state)
         
-        # Authenticate
-        is_valid = auth.authenticate("testuser", "testpass")
+        # Authenticate (now returns tuple)
+        is_valid, error_msg = auth.authenticate("testuser", "testpass")
         assert is_valid == True
+        assert error_msg is None
         
         # Login user
         auth.login_user(session_state, "testuser")
@@ -141,9 +146,11 @@ class TestAuthenticationFlow:
         # Initialize session state
         auth.init_session_state(session_state)
         
-        # Attempt authentication with wrong password
-        is_valid = auth.authenticate("testuser", "wrongpass")
+        # Attempt authentication with wrong password (now returns tuple)
+        is_valid, error_msg = auth.authenticate("testuser", "wrongpass")
         assert is_valid == False
+        assert error_msg is not None
+        assert "Invalid username or password" in error_msg
         
         # Session state should remain unauthenticated
         assert session_state.authenticated == False

@@ -54,6 +54,123 @@ from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
 from modules.database import execute_query, execute_update, get_db_connection
 from config.settings import Settings
+from modules.logging_service import get_logger, log_operation
+
+logger = get_logger(__name__)
+
+
+# Maximum depth for nested JSON structures
+MAX_JSON_DEPTH = 5
+# Maximum string length for metadata fields
+MAX_STRING_LENGTH = 10000
+# Maximum array length for keywords
+MAX_ARRAY_LENGTH = 100
+
+
+def validate_and_sanitize_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Validate and sanitize metadata to prevent SQL injection and malicious payloads.
+    
+    Args:
+        metadata: Raw metadata dictionary
+        
+    Returns:
+        Sanitized metadata dictionary
+        
+    Raises:
+        ValueError: If metadata contains malicious content
+    """
+    if not isinstance(metadata, dict):
+        raise ValueError("Metadata must be a dictionary")
+    
+    sanitized = {}
+    
+    # Validate and sanitize each field
+    for key, value in metadata.items():
+        # Check key is a valid string
+        if not isinstance(key, str) or len(key) > 100:
+            raise ValueError(f"Invalid metadata key: {key}")
+        
+        # Sanitize based on expected type
+        if key == 'keywords':
+            # Keywords should be a list of strings
+            if not isinstance(value, list):
+                raise ValueError("Keywords must be a list")
+            if len(value) > MAX_ARRAY_LENGTH:
+                raise ValueError(f"Keywords array too large (max {MAX_ARRAY_LENGTH})")
+            
+            sanitized_keywords = []
+            for keyword in value:
+                if not isinstance(keyword, str):
+                    continue  # Skip non-string keywords
+                if len(keyword) > 200:
+                    keyword = keyword[:200]  # Truncate long keywords
+                # Remove potentially dangerous characters
+                keyword = keyword.replace('\x00', '').replace('\n', ' ').replace('\r', ' ')
+                sanitized_keywords.append(keyword)
+            sanitized[key] = sanitized_keywords
+            
+        elif isinstance(value, str):
+            # String fields - check length and sanitize
+            if len(value) > MAX_STRING_LENGTH:
+                raise ValueError(f"Metadata field '{key}' too large (max {MAX_STRING_LENGTH} characters)")
+            
+            # Remove null bytes and control characters
+            sanitized_value = value.replace('\x00', '').strip()
+            
+            # Check for suspicious SQL patterns (basic protection)
+            suspicious_patterns = ['--', ';--', '/*', '*/', 'xp_', 'sp_', 'exec(', 'execute(']
+            value_lower = sanitized_value.lower()
+            for pattern in suspicious_patterns:
+                if pattern in value_lower:
+                    logger.warning(
+                        f"Suspicious pattern '{pattern}' detected in metadata field '{key}'",
+                        extra={"operation": "validate_metadata", "field": key, "pattern": pattern}
+                    )
+                    # Remove the suspicious pattern
+                    sanitized_value = sanitized_value.replace(pattern, '')
+            
+            sanitized[key] = sanitized_value
+            
+        elif isinstance(value, (int, float, bool)):
+            # Numeric and boolean values are safe
+            sanitized[key] = value
+            
+        elif value is None:
+            # None values are acceptable
+            sanitized[key] = None
+            
+        else:
+            # Reject complex nested structures
+            raise ValueError(f"Unsupported metadata type for key '{key}': {type(value)}")
+    
+    return sanitized
+
+
+def _check_json_depth(obj: Any, current_depth: int = 0) -> int:
+    """
+    Check the depth of a JSON structure.
+    
+    Args:
+        obj: Object to check
+        current_depth: Current recursion depth
+        
+    Returns:
+        Maximum depth found
+    """
+    if current_depth > MAX_JSON_DEPTH:
+        raise ValueError(f"JSON structure too deeply nested (max depth: {MAX_JSON_DEPTH})")
+    
+    if isinstance(obj, dict):
+        if not obj:
+            return current_depth
+        return max(_check_json_depth(v, current_depth + 1) for v in obj.values())
+    elif isinstance(obj, list):
+        if not obj:
+            return current_depth
+        return max(_check_json_depth(item, current_depth + 1) for item in obj)
+    else:
+        return current_depth
 
 
 # Suggested columns for each dataset type (flexible - not strictly required)
@@ -118,6 +235,15 @@ def validate_csv(file, dataset_type: str, strict_mode: bool = False) -> Tuple[bo
         # Check if file is empty
         if df.empty:
             return False, "Uploaded file is empty. Please upload a file with data."
+        
+        # Check for duplicate column names
+        duplicate_cols = df.columns[df.columns.duplicated()].tolist()
+        if duplicate_cols:
+            unique_duplicates = list(set(duplicate_cols))
+            return False, (
+                f"Duplicate column names detected: {', '.join(unique_duplicates)}. "
+                f"Each column must have a unique name. Please rename duplicate columns in your CSV file before uploading."
+            )
         
         # Check for completely empty columns
         empty_cols = [col for col in df.columns if df[col].isna().all()]
@@ -293,6 +419,7 @@ def auto_detect_metadata(df: pd.DataFrame, dataset_type: str, filename: str) -> 
     return metadata
 
 
+@log_operation("store_dataset")
 def store_dataset(
     df: pd.DataFrame,
     dataset_name: str,
@@ -314,7 +441,21 @@ def store_dataset(
             
     Returns:
         dataset_id of stored dataset
+        
+    Raises:
+        ValueError: If metadata contains malicious content
     """
+    # Validate and sanitize metadata
+    if metadata:
+        try:
+            metadata = validate_and_sanitize_metadata(metadata)
+        except ValueError as e:
+            logger.error(
+                f"Metadata validation failed: {str(e)}",
+                extra={"operation": "store_dataset", "error": str(e)}
+            )
+            raise ValueError(f"Invalid metadata: {str(e)}")
+    
     # Prepare metadata
     meta = metadata or {}
     column_names = json.dumps(df.columns.tolist())
@@ -332,7 +473,7 @@ def store_dataset(
     }
     provenance_json = json.dumps(provenance)
     
-    # Insert dataset record
+    # Insert dataset record using parameterized query (SQL injection safe)
     dataset_id = execute_update(
         """
         INSERT INTO datasets (
@@ -364,12 +505,30 @@ def store_dataset(
         _store_usage_data(df, dataset_id)
     elif dataset_type == "circulation":
         _store_circulation_data(df, dataset_id)
-    
+
+    # Evaluate and persist analysis capabilities
+    capabilities = evaluate_dataset_capabilities(df, dataset_type, dataset_id)
+    execute_update(
+        "UPDATE datasets SET analysis_capabilities = ? WHERE id = ?",
+        (json.dumps(capabilities), dataset_id)
+    )
+
     return dataset_id
 
 
 def _store_survey_data(df: pd.DataFrame, dataset_id: int) -> None:
-    """Store survey response data."""
+    """Store survey response data, handling flexible column names."""
+    # Map flexible column names to canonical names
+    col_map = {}
+    for col in df.columns:
+        cl = col.lower()
+        if 'date' in cl or 'time' in cl:
+            col_map.setdefault('response_date', col)
+        elif any(k in cl for k in ['question', 'prompt', 'item']):
+            col_map.setdefault('question', col)
+        elif any(k in cl for k in ['response', 'answer', 'feedback', 'comment', 'text']):
+            col_map.setdefault('response_text', col)
+
     with get_db_connection() as conn:
         for _, row in df.iterrows():
             conn.execute(
@@ -380,15 +539,27 @@ def _store_survey_data(df: pd.DataFrame, dataset_id: int) -> None:
                 """,
                 (
                     dataset_id,
-                    row.get('response_date'),
-                    row.get('question'),
-                    row.get('response_text')
+                    row.get(col_map.get('response_date', 'response_date')),
+                    row.get(col_map.get('question', 'question')),
+                    row.get(col_map.get('response_text', 'response_text'))
                 )
             )
 
 
 def _store_usage_data(df: pd.DataFrame, dataset_id: int) -> None:
-    """Store usage statistics data."""
+    """Store usage statistics data, handling flexible column names."""
+    col_map = {}
+    for col in df.columns:
+        cl = col.lower()
+        if 'date' in cl or 'time' in cl or 'period' in cl:
+            col_map.setdefault('date', col)
+        elif any(k in cl for k in ['metric', 'name', 'measure', 'indicator']):
+            col_map.setdefault('metric_name', col)
+        elif any(k in cl for k in ['value', 'count', 'total', 'number', 'visits', 'sessions']):
+            col_map.setdefault('metric_value', col)
+        elif any(k in cl for k in ['category', 'type', 'group']):
+            col_map.setdefault('category', col)
+
     with get_db_connection() as conn:
         for _, row in df.iterrows():
             conn.execute(
@@ -399,16 +570,26 @@ def _store_usage_data(df: pd.DataFrame, dataset_id: int) -> None:
                 """,
                 (
                     dataset_id,
-                    row.get('date'),
-                    row.get('metric_name'),
-                    row.get('metric_value'),
-                    row.get('category', '')
+                    row.get(col_map.get('date', 'date')),
+                    row.get(col_map.get('metric_name', 'metric_name')),
+                    row.get(col_map.get('metric_value', 'metric_value')),
+                    row.get(col_map.get('category', 'category'), '')
                 )
             )
 
 
 def _store_circulation_data(df: pd.DataFrame, dataset_id: int) -> None:
-    """Store circulation data (stored as usage statistics for MVP)."""
+    """Store circulation data, handling flexible column names."""
+    col_map = {}
+    for col in df.columns:
+        cl = col.lower()
+        if 'date' in cl or 'time' in cl:
+            col_map.setdefault('checkout_date', col)
+        elif any(k in cl for k in ['material', 'type', 'format', 'item', 'resource']):
+            col_map.setdefault('material_type', col)
+        elif any(k in cl for k in ['patron', 'user', 'borrower', 'member', 'category']):
+            col_map.setdefault('patron_type', col)
+
     with get_db_connection() as conn:
         for _, row in df.iterrows():
             conn.execute(
@@ -419,10 +600,10 @@ def _store_circulation_data(df: pd.DataFrame, dataset_id: int) -> None:
                 """,
                 (
                     dataset_id,
-                    row.get('checkout_date'),
-                    row.get('material_type'),
+                    row.get(col_map.get('checkout_date', 'checkout_date')),
+                    row.get(col_map.get('material_type', 'material_type')),
                     1,  # Count of 1 per checkout
-                    row.get('patron_type', '')
+                    row.get(col_map.get('patron_type', 'patron_type'), '')
                 )
             )
 
@@ -476,7 +657,7 @@ def get_datasets() -> List[Dict[str, Any]]:
         """
         SELECT id, name, dataset_type, upload_date, row_count,
                title, description, source, keywords,
-               usage_notes, ethical_considerations
+               usage_notes, ethical_considerations, analysis_capabilities
         FROM datasets
         ORDER BY upload_date DESC
         """
@@ -486,6 +667,8 @@ def get_datasets() -> List[Dict[str, Any]]:
     for dataset in datasets:
         if dataset.get('keywords'):
             dataset['keywords'] = json.loads(dataset['keywords'])
+        if dataset.get('analysis_capabilities'):
+            dataset['analysis_capabilities'] = json.loads(dataset['analysis_capabilities'])
     
     return datasets
 
@@ -500,6 +683,9 @@ def update_dataset_metadata(dataset_id: int, metadata: Dict[str, Any]) -> bool:
         
     Returns:
         True if successful, False if dataset not found
+        
+    Raises:
+        ValueError: If metadata contains malicious content
     """
     # Check if dataset exists
     datasets = execute_query(
@@ -510,10 +696,20 @@ def update_dataset_metadata(dataset_id: int, metadata: Dict[str, Any]) -> bool:
     if not datasets:
         return False
     
+    # Validate and sanitize metadata
+    try:
+        metadata = validate_and_sanitize_metadata(metadata)
+    except ValueError as e:
+        logger.error(
+            f"Metadata validation failed: {str(e)}",
+            extra={"operation": "update_dataset_metadata", "dataset_id": dataset_id, "error": str(e)}
+        )
+        raise ValueError(f"Invalid metadata: {str(e)}")
+    
     # Prepare keywords as JSON
     keywords_json = json.dumps(metadata.get('keywords', []))
     
-    # Update metadata
+    # Update metadata using parameterized query (SQL injection safe)
     execute_update(
         """
         UPDATE datasets SET
@@ -542,7 +738,7 @@ def update_dataset_metadata(dataset_id: int, metadata: Dict[str, Any]) -> bool:
 
 def delete_dataset(dataset_id: int) -> bool:
     """
-    Delete dataset from database (cascade deletes related data).
+    Delete dataset from database and ChromaDB (synchronized deletion).
     
     Args:
         dataset_id: Dataset identifier
@@ -559,10 +755,46 @@ def delete_dataset(dataset_id: int) -> bool:
     if not datasets:
         return False
     
-    # Delete dataset (cascade will handle related tables)
+    # Delete from ChromaDB first to maintain synchronization
+    try:
+        from modules.rag_query import RAGQuery
+        rag = RAGQuery()
+        
+        # Get all document IDs for this dataset
+        results = rag.collection.get(
+            where={"dataset_id": str(dataset_id)}
+        )
+        
+        if results['ids']:
+            # Delete embeddings from ChromaDB
+            rag.collection.delete(ids=results['ids'])
+            logger.info(
+                f"Deleted {len(results['ids'])} embeddings from ChromaDB for dataset {dataset_id}",
+                extra={"operation": "delete_dataset", "dataset_id": dataset_id, "embeddings_deleted": len(results['ids'])}
+            )
+        else:
+            logger.info(
+                f"No embeddings found in ChromaDB for dataset {dataset_id}",
+                extra={"operation": "delete_dataset", "dataset_id": dataset_id}
+            )
+    except Exception as e:
+        # Log error but continue with database deletion to avoid orphaned database records
+        logger.error(
+            f"Failed to delete embeddings from ChromaDB for dataset {dataset_id}: {str(e)}",
+            extra={"operation": "delete_dataset", "dataset_id": dataset_id, "error": str(e)}
+        )
+        # Note: We continue with database deletion even if ChromaDB deletion fails
+        # This prevents orphaned database records, though it may leave orphaned embeddings
+    
+    # Delete dataset from database (cascade will handle related tables)
     execute_update(
         "DELETE FROM datasets WHERE id = ?",
         (dataset_id,)
+    )
+    
+    logger.info(
+        f"Successfully deleted dataset {dataset_id} from database",
+        extra={"operation": "delete_dataset", "dataset_id": dataset_id}
     )
     
     return True
@@ -647,13 +879,177 @@ def generate_data_manifest() -> Dict[str, Any]:
     return manifest
 
 
+def evaluate_dataset_capabilities(df: pd.DataFrame, dataset_type: str, dataset_id: Optional[int] = None) -> Dict[str, Any]:
+    """
+    Inspect a DataFrame and return a detailed capability report covering
+    which analyses can be run, why, and what the data looks like.
+
+    Args:
+        df: The dataset as a DataFrame
+        dataset_type: 'survey', 'usage', or 'circulation'
+        dataset_id: Optional — if provided, also checks actual stored rows
+
+    Returns:
+        Dict with keys:
+            - analyses: dict of analysis_name -> {available, reason, details}
+            - summary: short human-readable paragraph
+            - warnings: list of data quality issues
+            - stats: basic numeric/text stats
+    """
+    row_count = len(df)
+    col_count = len(df.columns)
+    numeric_cols = df.select_dtypes(include='number').columns.tolist()
+    text_cols = [c for c in df.columns if df[c].dtype == object]
+    date_cols = [c for c in df.columns if any(t in c.lower() for t in ['date', 'time', 'period', 'month', 'year'])]
+    warnings = []
+
+    # Check for sparse data
+    null_pct = df.isnull().mean()
+    sparse_cols = null_pct[null_pct > 0.5].index.tolist()
+    if sparse_cols:
+        warnings.append(f"Columns with >50% missing values: {', '.join(sparse_cols)}")
+
+    # --- Qualitative ---
+    has_text = len(text_cols) > 0
+    enough_for_qual = row_count >= 10
+    qual_available = dataset_type == 'survey' and has_text and enough_for_qual
+
+    qual_reason = ""
+    if dataset_type != 'survey':
+        qual_reason = f"Dataset type is '{dataset_type}' — qualitative analysis requires survey/text data."
+    elif not has_text:
+        qual_reason = "No text columns detected."
+    elif not enough_for_qual:
+        qual_reason = f"Only {row_count} rows — need at least 10 for meaningful analysis."
+    else:
+        qual_reason = f"Ready: {row_count} text responses across {len(text_cols)} text column(s)."
+
+    # --- Correlation ---
+    # Need ≥2 numeric cols and ≥10 complete rows
+    usable_numeric = [c for c in numeric_cols if df[c].notna().sum() >= 10]
+    corr_available = len(usable_numeric) >= 2 and dataset_type in ('usage', 'circulation')
+    corr_reason = (
+        f"Ready: {len(usable_numeric)} numeric columns with sufficient data."
+        if corr_available else
+        f"Need ≥2 numeric columns with ≥10 values. Found {len(usable_numeric)} usable."
+        if dataset_type in ('usage', 'circulation') else
+        "Correlation requires numeric usage/circulation data."
+    )
+
+    # --- Trend ---
+    has_date = len(date_cols) > 0
+    trend_available = has_date and len(usable_numeric) >= 1 and dataset_type in ('usage', 'circulation')
+    trend_reason = (
+        f"Ready: date column '{date_cols[0]}' + {len(usable_numeric)} numeric metric(s)."
+        if trend_available else
+        "No date column detected — trend analysis requires time series data."
+        if not has_date else
+        "Trend requires numeric usage/circulation data."
+    )
+
+    # --- Comparative ---
+    # Need a categorical grouping column and a numeric value column
+    cat_cols = [c for c in df.columns if df[c].dtype == object and df[c].nunique() <= 20 and df[c].nunique() >= 2]
+    comp_available = len(cat_cols) >= 1 and len(usable_numeric) >= 1 and dataset_type in ('usage', 'circulation')
+    comp_reason = (
+        f"Ready: can compare across '{cat_cols[0]}' ({df[cat_cols[0]].nunique()} groups)."
+        if comp_available else
+        f"Need a categorical grouping column (≤20 unique values). Found {len(cat_cols)}."
+        if dataset_type in ('usage', 'circulation') else
+        "Comparative analysis requires usage/circulation data."
+    )
+
+    # --- Distribution ---
+    dist_available = len(usable_numeric) >= 1 and dataset_type in ('usage', 'circulation')
+    dist_reason = (
+        f"Ready: {len(usable_numeric)} numeric column(s) available."
+        if dist_available else
+        "Distribution analysis requires at least one numeric column."
+        if dataset_type in ('usage', 'circulation') else
+        "Distribution analysis requires usage/circulation data."
+    )
+
+    # --- RAG / Query ---
+    rag_available = row_count >= 1
+    rag_reason = f"Ready: {row_count} rows will be indexed for natural language queries."
+
+    analyses = {
+        "qualitative_sentiment": {"available": qual_available, "reason": qual_reason},
+        "qualitative_themes":    {"available": qual_available, "reason": qual_reason},
+        "correlation":           {"available": corr_available, "reason": corr_reason},
+        "trend":                 {"available": trend_available, "reason": trend_reason},
+        "comparative":           {"available": comp_available, "reason": comp_reason},
+        "distribution":          {"available": dist_available, "reason": dist_reason},
+        "rag_query":             {"available": rag_available,  "reason": rag_reason},
+    }
+
+    available_names = [k for k, v in analyses.items() if v['available']]
+    unavailable_names = [k for k, v in analyses.items() if not v['available']]
+
+    summary = (
+        f"This {dataset_type} dataset has {row_count:,} rows and {col_count} columns. "
+        f"Available analyses: {', '.join(available_names) if available_names else 'none'}. "
+        + (f"Not available: {', '.join(unavailable_names)}." if unavailable_names else "")
+    )
+
+    return {
+        "analyses": analyses,
+        "summary": summary,
+        "warnings": warnings,
+        "stats": {
+            "row_count": row_count,
+            "col_count": col_count,
+            "numeric_cols": numeric_cols,
+            "text_cols": text_cols,
+            "date_cols": date_cols,
+            "usable_numeric_cols": usable_numeric,
+        }
+    }
+
+
+def classify_dataset_for_analysis(dataset: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Classify a dataset as suitable for qualitative and/or quantitative analysis.
+
+    Returns a dict with:
+        - qualitative: bool
+        - quantitative: bool
+        - reason: str  (human-readable explanation)
+        - recommended: 'qualitative' | 'quantitative' | 'both' | 'neither'
+    """
+    dtype = dataset.get('dataset_type', '')
+    row_count = dataset.get('row_count', 0)
+
+    if dtype == 'survey':
+        return {
+            'qualitative': True,
+            'quantitative': False,
+            'reason': 'Survey datasets contain text responses — best suited for sentiment and theme analysis.',
+            'recommended': 'qualitative',
+        }
+    elif dtype in ('usage', 'circulation'):
+        return {
+            'qualitative': False,
+            'quantitative': True,
+            'reason': f'{dtype.title()} datasets contain numeric metrics — best suited for correlation, trend, and distribution analysis.',
+            'recommended': 'quantitative',
+        }
+    else:
+        return {
+            'qualitative': False,
+            'quantitative': False,
+            'reason': 'Unknown dataset type.',
+            'recommended': 'neither',
+        }
+
+
 def check_duplicate(file_hash: str) -> Optional[Dict[str, Any]]:
     """
     Check if a file with the same hash has already been uploaded.
-    
+
     Args:
         file_hash: SHA256 hash of file
-        
+
     Returns:
         Dataset info if duplicate found, None otherwise
     """
@@ -661,7 +1057,6 @@ def check_duplicate(file_hash: str) -> Optional[Dict[str, Any]]:
         "SELECT id, name, upload_date FROM datasets WHERE file_hash = ?",
         (file_hash,)
     )
-    
     return datasets[0] if datasets else None
 
 

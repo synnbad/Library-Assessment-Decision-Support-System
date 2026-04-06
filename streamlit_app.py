@@ -36,18 +36,15 @@ def show_login_page():
             if not username or not password:
                 st.error("Please enter both username and password.")
             else:
-                # Attempt authentication
-                if auth.authenticate(username, password):
+                # Attempt authentication with rate limiting
+                is_valid, error_msg = auth.authenticate(username, password)
+                if is_valid:
                     auth.login_user(st.session_state, username)
                     st.success(f"Welcome, {username}!")
                     st.rerun()
                 else:
-                    st.error("Invalid username or password.")
-                    st.session_state.login_attempts += 1
-                    
-                    # Rate limiting after 5 failed attempts
-                    if st.session_state.login_attempts >= 5:
-                        st.warning("Too many failed login attempts. Please try again later.")
+                    # Display specific error message from rate limiting
+                    st.error(error_msg or "Invalid username or password.")
     
     # First-time setup instructions
     st.markdown("---")
@@ -82,7 +79,8 @@ def show_main_app():
                 "Quantitative Analysis",
                 "Visualizations",
                 "Report Generation",
-                "Data Governance"
+                "Data Governance",
+                "Logs & Monitoring"
             ],
             key="navigation"
         )
@@ -104,6 +102,8 @@ def show_main_app():
         show_report_generation_page()
     elif page == "Data Governance":
         show_data_governance_page()
+    elif page == "Logs & Monitoring":
+        show_logs_page()
 
 
 def show_home_page():
@@ -398,7 +398,54 @@ def show_data_upload_page():
                         st.metric("Rows", dataset['row_count'])
                     with col3:
                         st.metric("Uploaded", dataset['upload_date'][:10])
-                    
+
+                    # Analysis Capabilities
+                    caps = dataset.get('analysis_capabilities')
+                    if caps and caps.get('analyses'):
+                        st.markdown("#### Analysis Capabilities")
+                        analyses = caps['analyses']
+                        LABELS = {
+                            "qualitative_sentiment": "Sentiment Analysis",
+                            "qualitative_themes":    "Theme Extraction",
+                            "correlation":           "Correlation",
+                            "trend":                 "Trend Analysis",
+                            "comparative":           "Comparative Analysis",
+                            "distribution":          "Distribution Analysis",
+                            "rag_query":             "Natural Language Query",
+                        }
+                        cols = st.columns(4)
+                        for idx, (key, info) in enumerate(analyses.items()):
+                            with cols[idx % 4]:
+                                label = LABELS.get(key, key)
+                                if info['available']:
+                                    st.success(label)
+                                else:
+                                    st.error(label)
+                        if caps.get('warnings'):
+                            for w in caps['warnings']:
+                                st.warning(w)
+                        with st.expander("Details", expanded=False):
+                            for key, info in analyses.items():
+                                label = LABELS.get(key, key)
+                                status = "[OK]" if info['available'] else "[N/A]"
+                                st.markdown(f"{status} **{label}**: {info['reason']}")
+                    elif not caps:
+                        # Dataset uploaded before this feature - show re-evaluate button
+                        if st.button("Evaluate Capabilities", key=f"eval_{dataset['id']}"):
+                            try:
+                                df_preview = csv_handler.get_preview(dataset['id'], n_rows=10000)
+                                new_caps = csv_handler.evaluate_dataset_capabilities(
+                                    df_preview, dataset['dataset_type'], dataset['id']
+                                )
+                                import json as _json
+                                from modules.database import execute_update as _eu
+                                _eu("UPDATE datasets SET analysis_capabilities = ? WHERE id = ?",
+                                    (_json.dumps(new_caps), dataset['id']))
+                                st.success("Capabilities evaluated - refresh to see results.")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Could not evaluate: {e}")
+
                     # FAIR/CARE Metadata
                     st.markdown("#### Metadata")
                     
@@ -538,8 +585,7 @@ def show_data_upload_page():
 def show_query_interface_page():
     """Display query interface page with chat interface and RAG functionality."""
     from modules.rag_query import RAGQuery
-    from modules import auth
-    import uuid
+    from modules import auth, csv_handler
     
     st.title("Query Interface")
     st.markdown("Ask questions about your library data in natural language.")
@@ -553,16 +599,48 @@ def show_query_interface_page():
             st.info("Please ensure ChromaDB is properly configured.")
             return
     
-    # Initialize session ID for conversation context
+    # Initialize secure session ID for conversation context
+    # Uses cryptographically secure token with username and timestamp
     if 'query_session_id' not in st.session_state:
-        st.session_state.query_session_id = str(uuid.uuid4())
+        st.session_state.query_session_id = auth.get_secure_session_id(
+            st.session_state, 
+            st.session_state.username
+        )
+    else:
+        # Validate existing session ID on each request
+        is_valid, error_msg = auth.validate_session_id(
+            st.session_state.query_session_id,
+            st.session_state.username
+        )
+        if not is_valid:
+            # Session invalid, create new one
+            st.warning(f"Session validation failed: {error_msg}. Creating new session.")
+            st.session_state.query_session_id = auth.get_secure_session_id(
+                st.session_state,
+                st.session_state.username
+            )
     
     # Initialize message history in session state
     if 'messages' not in st.session_state:
         st.session_state.messages = []
-    
-    # Test Ollama connection
+
     rag_engine = st.session_state.rag_engine
+
+    # Auto-index any datasets not yet in ChromaDB
+    datasets = csv_handler.get_datasets()
+    newly_indexed = []
+    for ds in datasets:
+        if not rag_engine._is_dataset_indexed(ds['id']):
+            try:
+                n = rag_engine.index_dataset(ds['id'])
+                if n > 0:
+                    newly_indexed.append(f"{ds['name']} ({n} docs)")
+            except Exception as e:
+                st.warning(f"Could not index dataset '{ds['name']}': {e}")
+    if newly_indexed:
+        st.info(f"Indexed datasets: {', '.join(newly_indexed)}")
+
+    # Test Ollama connection
     is_connected, error_msg = rag_engine.test_ollama_connection()
     
     if not is_connected:
@@ -594,7 +672,11 @@ def show_query_interface_page():
         if st.button("Clear Context", use_container_width=True):
             rag_engine.clear_conversation(st.session_state.query_session_id)
             st.session_state.messages = []
-            st.session_state.query_session_id = str(uuid.uuid4())
+            # Generate new secure session ID with username and timestamp
+            st.session_state.query_session_id = auth.get_secure_session_id(
+                st.session_state,
+                st.session_state.username
+            )
             
             # Log access
             auth.log_access(
@@ -608,7 +690,7 @@ def show_query_interface_page():
     st.markdown("---")
     
     # Display chat messages
-    for message in st.session_state.messages:
+    for msg_idx, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
             # Check for error type in assistant messages
             if message["role"] == "assistant" and "error_type" in message:
@@ -638,7 +720,7 @@ def show_query_interface_page():
                 if message["suggested_questions"]:
                     with st.expander("Suggested Follow-up Questions", expanded=False):
                         for i, suggestion in enumerate(message["suggested_questions"]):
-                            if st.button(suggestion, key=f"suggestion_{len(st.session_state.messages)}_{i}"):
+                            if st.button(suggestion, key=f"suggestion_{msg_idx}_{i}"):
                                 # Add suggestion as user message and process it
                                 st.session_state.messages.append({"role": "user", "content": suggestion})
                                 st.rerun()
@@ -692,7 +774,7 @@ def show_query_interface_page():
                     if result["suggested_questions"]:
                         with st.expander("Suggested Follow-up Questions", expanded=False):
                             for i, suggestion in enumerate(result["suggested_questions"]):
-                                if st.button(suggestion, key=f"new_suggestion_{i}"):
+                                if st.button(suggestion, key=f"suggestion_live_{len(st.session_state.messages)}_{i}"):
                                     # Add suggestion as user message
                                     st.session_state.messages.append({"role": "user", "content": suggestion})
                                     st.rerun()
@@ -807,29 +889,41 @@ def show_qualitative_analysis_page():
     
     # Get available datasets
     datasets = csv_handler.get_datasets()
-    survey_datasets = [d for d in datasets if d['dataset_type'] == 'survey']
-    
-    if not survey_datasets:
-        st.info("No survey datasets available. Please upload survey data in the Data Upload section.")
+
+    if not datasets:
+        st.info("No datasets available. Please upload data in the Data Upload section.")
         return
-    
-    # Dataset selector
+
+    # Classify datasets and build selector with hints
+    def _label(d):
+        info = csv_handler.classify_dataset_for_analysis(d)
+        tag = "Recommended" if info['recommended'] == 'qualitative' else "Not ideal"
+        return f"{d['name']} (ID: {d['id']}, {d['dataset_type']}) - {tag}"
+
+    dataset_options = {_label(d): d['id'] for d in datasets}
+    survey_datasets = [d for d in datasets if d['dataset_type'] == 'survey']
+
+    # Default to first survey dataset if available
+    default_label = next((_label(d) for d in survey_datasets), list(dataset_options.keys())[0])
+
     st.markdown("### Select Dataset")
-    dataset_options = {f"{d['name']} (ID: {d['id']})": d['id'] for d in survey_datasets}
-    selected_dataset_name = st.selectbox(
-        "Choose a survey dataset to analyze",
+    selected_label = st.selectbox(
+        "Choose a dataset to analyze",
         options=list(dataset_options.keys()),
+        index=list(dataset_options.keys()).index(default_label),
         key="analysis_dataset_selector"
     )
-    
-    if not selected_dataset_name:
-        return
-    
-    selected_dataset_id = dataset_options[selected_dataset_name]
-    
-    # Get dataset info
-    selected_dataset = next(d for d in survey_datasets if d['id'] == selected_dataset_id)
-    
+
+    selected_dataset_id = dataset_options[selected_label]
+    selected_dataset = next(d for d in datasets if d['id'] == selected_dataset_id)
+    analysis_info = csv_handler.classify_dataset_for_analysis(selected_dataset)
+
+    # Show suitability banner
+    if analysis_info['recommended'] == 'qualitative':
+        st.success(analysis_info['reason'])
+    else:
+        st.warning(f"{analysis_info['reason']} Results may be limited.")
+
     # Display dataset info
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -863,13 +957,9 @@ def show_qualitative_analysis_page():
     if analyze_button:
         with st.spinner("Analyzing responses... This may take a moment."):
             try:
-                # Run sentiment analysis
                 sentiment_results = qualitative_analysis.analyze_dataset_sentiment(selected_dataset_id)
-                
-                # Run theme extraction
                 theme_results = qualitative_analysis.extract_themes(selected_dataset_id, n_themes)
                 
-                # Store results in session state
                 st.session_state.analysis_results = {
                     'dataset_id': selected_dataset_id,
                     'dataset_name': selected_dataset['name'],
@@ -877,7 +967,6 @@ def show_qualitative_analysis_page():
                     'themes': theme_results
                 }
                 
-                # Log access
                 auth.log_access(
                     st.session_state.username,
                     f"Performed qualitative analysis on dataset: {selected_dataset['name']} (ID: {selected_dataset_id})"
@@ -1080,32 +1169,39 @@ def show_visualizations_page():
     """Display visualizations page with chart generation and export."""
     from modules import csv_handler, visualization, auth
     import pandas as pd
-    
+
     st.title("Visualizations")
     st.markdown("Generate charts to visualize trends and patterns in your library data.")
-    
-    # Get available datasets
+
     datasets = csv_handler.get_datasets()
-    
     if not datasets:
         st.info("No datasets available. Please upload data in the Data Upload section.")
         return
-    
-    # Dataset selector
+
+    # Smart dataset selector
+    def _viz_label(d):
+        caps = d.get('analysis_capabilities', {})
+        analyses = caps.get('analyses', {}) if caps else {}
+        stats = caps.get('stats', {}) if caps else {}
+        n_num = len(stats.get('usable_numeric_cols', []))
+        has_date = len(stats.get('date_cols', [])) > 0
+        hints = []
+        if d['dataset_type'] in ('usage', 'circulation'):
+            if has_date: hints.append('trend')
+            if n_num >= 1: hints.append('bar/pie')
+        elif d['dataset_type'] == 'survey':
+            hints.append('sentiment chart')
+        tag = ', '.join(hints) if hints else d['dataset_type']
+        return f"{d['name']} ({d['dataset_type']}) - {tag}"
+
+    dataset_options = {_viz_label(d): d['id'] for d in datasets}
     st.markdown("### Select Dataset")
-    dataset_options = {f"{d['name']} (ID: {d['id']})": d['id'] for d in datasets}
-    selected_dataset_name = st.selectbox(
+    selected_label = st.selectbox(
         "Choose a dataset to visualize",
         options=list(dataset_options.keys()),
         key="viz_dataset_selector"
     )
-    
-    if not selected_dataset_name:
-        return
-    
-    selected_dataset_id = dataset_options[selected_dataset_name]
-    
-    # Get dataset info
+    selected_dataset_id = dataset_options[selected_label]
     selected_dataset = next(d for d in datasets if d['id'] == selected_dataset_id)
     
     # Display dataset info
@@ -1116,53 +1212,79 @@ def show_visualizations_page():
         st.metric("Type", selected_dataset['dataset_type'].title())
     with col3:
         st.metric("Rows", selected_dataset['row_count'])
-    
+
     st.markdown("---")
-    
-    # Load dataset preview to get columns
+
+    # Load full dataset for column inspection
     try:
         preview_df = csv_handler.get_preview(selected_dataset_id, n_rows=selected_dataset['row_count'])
-        
+
         if preview_df.empty:
             st.error("Unable to load dataset. Please try another dataset.")
             return
-        
-        # Chart type selector
+
+        available_columns = preview_df.columns.tolist()
+        numeric_cols = preview_df.select_dtypes(include='number').columns.tolist()
+        date_cols = [c for c in available_columns if any(t in c.lower() for t in ['date', 'time', 'period', 'month', 'year'])]
+        text_cols = [c for c in available_columns if preview_df[c].dtype == object]
+
+        # Auto-detect best chart type and columns
+        dtype = selected_dataset['dataset_type']
+        if dtype in ('usage', 'circulation') and date_cols and numeric_cols:
+            default_chart = "Line Chart"
+            default_x = date_cols[0]
+            default_y = numeric_cols[0]
+            st.info(f"Time series detected - Line Chart pre-selected using '{default_x}' vs '{default_y}'.")
+        elif dtype in ('usage', 'circulation') and numeric_cols:
+            default_chart = "Bar Chart"
+            default_x = text_cols[0] if text_cols else available_columns[0]
+            default_y = numeric_cols[0]
+            st.info("Numeric data detected - Bar Chart pre-selected.")
+        elif dtype == 'survey':
+            default_chart = "Pie Chart"
+            # For survey, sentiment column is best for pie; fall back to first text col
+            sentiment_col = next((c for c in available_columns if 'sentiment' in c.lower()), None)
+            default_x = sentiment_col or (text_cols[0] if text_cols else available_columns[0])
+            default_y = numeric_cols[0] if numeric_cols else available_columns[0]
+            st.info("Survey data detected - Pie Chart pre-selected for distribution view.")
+        else:
+            default_chart = "Bar Chart"
+            default_x = available_columns[0]
+            default_y = numeric_cols[0] if numeric_cols else available_columns[0]
+
+        # Chart configuration
         st.markdown("### Chart Configuration")
-        
         col1, col2 = st.columns([1, 1])
-        
         with col1:
             chart_type = st.selectbox(
                 "Chart Type",
                 options=["Bar Chart", "Line Chart", "Pie Chart"],
-                help="Select the type of chart to generate"
+                index=["Bar Chart", "Line Chart", "Pie Chart"].index(default_chart),
+                help="Auto-selected based on dataset type - change if needed"
             )
-        
         with col2:
             chart_title = st.text_input(
                 "Chart Title",
-                value=f"{selected_dataset['name']} Visualization",
+                value=f"{selected_dataset['name']} - {chart_type}",
                 help="Enter a title for your chart"
             )
-        
-        # Column selection based on chart type
+
         st.markdown("#### Select Columns")
-        
-        available_columns = preview_df.columns.tolist()
-        
+
         if chart_type == "Pie Chart":
             col1, col2 = st.columns(2)
             with col1:
                 names_column = st.selectbox(
                     "Labels Column",
                     options=available_columns,
+                    index=available_columns.index(default_x) if default_x in available_columns else 0,
                     help="Column containing category names"
                 )
             with col2:
+                val_opts = numeric_cols if numeric_cols else available_columns
                 values_column = st.selectbox(
                     "Values Column",
-                    options=available_columns,
+                    options=val_opts,
                     help="Column containing numeric values"
                 )
         else:
@@ -1171,149 +1293,83 @@ def show_visualizations_page():
                 x_column = st.selectbox(
                     "X-Axis Column",
                     options=available_columns,
+                    index=available_columns.index(default_x) if default_x in available_columns else 0,
                     help="Column for x-axis"
                 )
             with col2:
+                y_opts = numeric_cols if numeric_cols else available_columns
+                y_default = y_opts.index(default_y) if default_y in y_opts else 0
                 y_column = st.selectbox(
                     "Y-Axis Column",
-                    options=available_columns,
-                    help="Column for y-axis (should be numeric)"
+                    options=y_opts,
+                    index=y_default,
+                    help="Column for y-axis (numeric)"
                 )
-            
-            # Optional axis labels
             with st.expander("Custom Axis Labels (Optional)", expanded=False):
                 col1, col2 = st.columns(2)
                 with col1:
                     x_label = st.text_input("X-Axis Label", value="")
                 with col2:
                     y_label = st.text_input("Y-Axis Label", value="")
-        
-        # Generate chart button
+
         st.markdown("---")
         generate_button = st.button("Generate Chart", type="primary", use_container_width=True)
-        
+
         if generate_button:
             with st.spinner("Generating chart..."):
                 try:
-                    # Validate columns and prepare data
                     if chart_type == "Pie Chart":
-                        # Check if columns exist
-                        if names_column not in preview_df.columns or values_column not in preview_df.columns:
-                            st.error("Selected columns not found in dataset.")
-                            return
-                        
-                        # Prepare data - aggregate if needed
                         chart_data = preview_df[[names_column, values_column]].copy()
-                        chart_data = chart_data.groupby(names_column)[values_column].sum().reset_index()
-                        
-                        # Generate pie chart
-                        fig = visualization.create_pie_chart(
-                            chart_data,
-                            values=values_column,
-                            names=names_column,
-                            title=chart_title
-                        )
-                    
+                        # If values column is not numeric, count occurrences
+                        if not pd.api.types.is_numeric_dtype(chart_data[values_column]):
+                            chart_data = chart_data.groupby(names_column).size().reset_index(name=values_column)
+                        else:
+                            chart_data = chart_data.groupby(names_column)[values_column].sum().reset_index()
+                        fig = visualization.create_pie_chart(chart_data, values=values_column, names=names_column, title=chart_title)
                     else:
-                        # Check if columns exist
-                        if x_column not in preview_df.columns or y_column not in preview_df.columns:
-                            st.error("Selected columns not found in dataset.")
-                            return
-                        
-                        # Prepare data - aggregate if needed for bar/line charts
                         chart_data = preview_df[[x_column, y_column]].copy()
-                        
-                        # Try to aggregate if x-axis has duplicates
                         if chart_data[x_column].duplicated().any():
                             chart_data = chart_data.groupby(x_column)[y_column].sum().reset_index()
-                        
-                        # Generate chart based on type
                         if chart_type == "Bar Chart":
-                            fig = visualization.create_bar_chart(
-                                chart_data,
-                                x=x_column,
-                                y=y_column,
-                                title=chart_title,
-                                x_label=x_label if x_label else None,
-                                y_label=y_label if y_label else None
-                            )
-                        else:  # Line Chart
-                            fig = visualization.create_line_chart(
-                                chart_data,
-                                x=x_column,
-                                y=y_column,
-                                title=chart_title,
-                                x_label=x_label if x_label else None,
-                                y_label=y_label if y_label else None
-                            )
-                    
-                    # Store chart in session state
+                            fig = visualization.create_bar_chart(chart_data, x=x_column, y=y_column, title=chart_title,
+                                x_label=x_label if x_label else None, y_label=y_label if y_label else None)
+                        else:
+                            fig = visualization.create_line_chart(chart_data, x=x_column, y=y_column, title=chart_title,
+                                x_label=x_label if x_label else None, y_label=y_label if y_label else None)
+
                     st.session_state.current_chart = {
-                        'figure': fig,
-                        'title': chart_title,
-                        'dataset_name': selected_dataset['name']
+                        'figure': fig, 'title': chart_title, 'dataset_name': selected_dataset['name']
                     }
-                    
-                    # Log access
-                    auth.log_access(
-                        st.session_state.username,
-                        f"Generated {chart_type} for dataset: {selected_dataset['name']} (ID: {selected_dataset_id})"
-                    )
-                    
+                    auth.log_access(st.session_state.username,
+                        f"Generated {chart_type} for dataset: {selected_dataset['name']} (ID: {selected_dataset_id})")
                     st.success("Chart generated successfully!")
-                    
-                except ValueError as e:
-                    st.error(f"Error: {str(e)}")
-                    st.info("Please ensure the selected columns contain appropriate data for the chart type.")
+
                 except Exception as e:
                     st.error(f"Error generating chart: {str(e)}")
-        
-        # Display chart if available
+
         if 'current_chart' in st.session_state:
             st.markdown("---")
             st.markdown("### Generated Chart")
-            
-            # Display the chart
             st.plotly_chart(st.session_state.current_chart['figure'], use_container_width=True)
-            
-            # Export options
+
             st.markdown("### Export Chart")
-            
             col1, col2 = st.columns(2)
-            
             with col1:
-                # Export as PNG
                 try:
-                    png_bytes = visualization.export_chart(
-                        st.session_state.current_chart['figure'],
-                        st.session_state.current_chart['title'],
-                        format='png'
-                    )
-                    st.download_button(
-                        "Download as PNG",
-                        data=png_bytes,
+                    png_bytes = visualization.export_chart(st.session_state.current_chart['figure'],
+                        st.session_state.current_chart['title'], format='png')
+                    st.download_button("Download as PNG", data=png_bytes,
                         file_name=f"{st.session_state.current_chart['title']}.png",
-                        mime="image/png",
-                        use_container_width=True
-                    )
-                except Exception as e:
-                    st.warning("PNG export not available. Please use HTML export instead.")
-            
+                        mime="image/png", use_container_width=True)
+                except Exception:
+                    st.warning("PNG export not available. Use HTML instead.")
             with col2:
-                # Export as HTML
-                html_bytes = visualization.export_chart(
-                    st.session_state.current_chart['figure'],
-                    st.session_state.current_chart['title'],
-                    format='html'
-                )
-                st.download_button(
-                    "Download as HTML",
-                    data=html_bytes,
+                html_bytes = visualization.export_chart(st.session_state.current_chart['figure'],
+                    st.session_state.current_chart['title'], format='html')
+                st.download_button("Download as HTML", data=html_bytes,
                     file_name=f"{st.session_state.current_chart['title']}.html",
-                    mime="text/html",
-                    use_container_width=True
-                )
-    
+                    mime="text/html", use_container_width=True)
+
     except Exception as e:
         st.error(f"Error loading dataset: {str(e)}")
         return
@@ -1363,107 +1419,134 @@ def show_report_generation_page():
     """Display report generation page with report creation and export."""
     from modules import csv_handler, report_generator, auth
     import json
-    
+
     st.title("Report Generation")
     st.markdown("Generate comprehensive reports with statistical summaries and narrative text.")
-    
-    # Get available datasets
+
     datasets = csv_handler.get_datasets()
-    
     if not datasets:
         st.info("No datasets available. Please upload data in the Data Upload section.")
         return
-    
-    # Report configuration section
+
+    # Smart dataset labels with capability hints
+    def _report_label(d):
+        caps = d.get('analysis_capabilities', {})
+        analyses = caps.get('analyses', {}) if caps else {}
+        badges = []
+        if analyses.get('qualitative_sentiment', {}).get('available'): badges.append('qualitative')
+        if analyses.get('correlation', {}).get('available'): badges.append('quantitative')
+        if analyses.get('rag_query', {}).get('available'): badges.append('queryable')
+        tag = ', '.join(badges) if badges else d['dataset_type']
+        return f"{d['name']} ({d['dataset_type']}) - {tag}"
+
+    dataset_options = {_report_label(d): d['id'] for d in datasets}
+
+    # Auto-select all datasets by default
+    all_labels = list(dataset_options.keys())
+
     st.markdown("### Report Configuration")
-    
-    # Multi-select for datasets
-    dataset_options = {f"{d['name']} (ID: {d['id']})": d['id'] for d in datasets}
-    selected_dataset_names = st.multiselect(
+    selected_labels = st.multiselect(
         "Select Datasets to Include",
-        options=list(dataset_options.keys()),
-        help="Choose one or more datasets to include in the report"
+        options=all_labels,
+        default=all_labels,
+        help="All datasets are pre-selected. Remove any you don't need."
     )
-    
-    if not selected_dataset_names:
+
+    if not selected_labels:
         st.info("Please select at least one dataset to generate a report.")
         return
-    
-    selected_dataset_ids = [dataset_options[name] for name in selected_dataset_names]
-    
-    # Report options
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        include_visualizations = st.checkbox(
-            "Include Visualizations",
-            value=True,
-            help="Add charts and graphs to the report"
-        )
-    
-    with col2:
-        include_qualitative = st.checkbox(
-            "Include Qualitative Analysis",
-            value=False,
-            help="Include sentiment and theme analysis if available"
-        )
-    
-    # Report title (optional)
-    custom_title = st.text_input(
-        "Custom Report Title (Optional)",
-        placeholder="Leave blank for auto-generated title",
-        help="Enter a custom title for your report"
+
+    selected_dataset_ids = [dataset_options[lbl] for lbl in selected_labels]
+    selected_datasets = [d for d in datasets if d['id'] in selected_dataset_ids]
+
+    # Auto-detect what options to enable
+    has_qualitative = any(
+        d.get('analysis_capabilities', {}) and
+        d['analysis_capabilities'].get('analyses', {}).get('qualitative_sentiment', {}).get('available')
+        for d in selected_datasets
     )
-    
+    has_quantitative = any(
+        d.get('analysis_capabilities', {}) and
+        d['analysis_capabilities'].get('analyses', {}).get('correlation', {}).get('available')
+        for d in selected_datasets
+    )
+    has_viz_data = any(
+        d.get('analysis_capabilities', {}) and
+        (d['analysis_capabilities'].get('analyses', {}).get('trend', {}).get('available') or
+         d['analysis_capabilities'].get('analyses', {}).get('distribution', {}).get('available'))
+        for d in selected_datasets
+    )
+
+    # Show what was auto-detected
+    if has_qualitative or has_quantitative or has_viz_data:
+        detected = []
+        if has_qualitative: detected.append("qualitative analysis")
+        if has_quantitative: detected.append("quantitative analysis")
+        if has_viz_data: detected.append("visualizations")
+        st.success(f"Auto-detected: {', '.join(detected)} - options pre-checked below.")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        include_visualizations = st.checkbox("Include Visualizations", value=has_viz_data,
+            help="Auto-enabled when usage/circulation data is present")
+    with col2:
+        include_qualitative = st.checkbox("Include Qualitative Analysis", value=has_qualitative,
+            help="Auto-enabled when survey data with text responses is present")
+    with col3:
+        include_quantitative = st.checkbox("Include Quantitative Analysis", value=has_quantitative,
+            help="Auto-enabled when numeric usage/circulation data is present")
+
+    custom_title = st.text_input("Custom Report Title (Optional)",
+        placeholder="Leave blank for auto-generated title")
+
+    # Show per-dataset capability summary
+    with st.expander("Dataset Capability Summary", expanded=False):
+        for d in selected_datasets:
+            caps = d.get('analysis_capabilities', {})
+            analyses = caps.get('analyses', {}) if caps else {}
+            st.markdown(f"**{d['name']}** ({d['dataset_type']})")
+            if analyses:
+                available = [k for k, v in analyses.items() if v.get('available')]
+                unavailable = [k for k, v in analyses.items() if not v.get('available')]
+                if available:
+                    st.markdown(f"  [OK] {', '.join(available)}")
+                if unavailable:
+                    st.markdown(f"  [N/A] {', '.join(unavailable)}")
+            else:
+                st.markdown("  _(capabilities not evaluated - re-upload to evaluate)_")
+
     st.markdown("---")
-    
-    # Generate report button
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
         generate_button = st.button("Generate Report", type="primary", use_container_width=True)
-    
-    # Generate report
+
     if generate_button:
-        # Progress indicator
         progress_bar = st.progress(0)
         status_text = st.empty()
-        
         try:
-            # Step 1: Create report structure
             status_text.text("Creating report structure...")
             progress_bar.progress(20)
-            
+
             report = report_generator.create_report(
                 dataset_ids=selected_dataset_ids,
                 include_viz=include_visualizations,
-                include_qualitative=include_qualitative
+                include_qualitative=include_qualitative,
+                include_quantitative=include_quantitative
             )
-            
-            # Apply custom title if provided
+
             if custom_title:
                 report['title'] = custom_title
-            
-            progress_bar.progress(60)
-            status_text.text("Generating narrative text...")
-            
-            # Step 2: Store report in session state
+
             progress_bar.progress(100)
             status_text.text("Report generated successfully!")
-            
             st.session_state.current_report = report
-            
-            # Log access
-            auth.log_access(
-                st.session_state.username,
-                f"Generated report for datasets: {', '.join([str(id) for id in selected_dataset_ids])}"
-            )
-            
+
+            auth.log_access(st.session_state.username,
+                f"Generated report for datasets: {', '.join([str(i) for i in selected_dataset_ids])}")
             st.success("Report generated successfully!")
-            
-            # Clear progress indicators
             progress_bar.empty()
             status_text.empty()
-            
+
         except ValueError as e:
             st.error(f"Error: {str(e)}")
             progress_bar.empty()
@@ -1474,146 +1557,101 @@ def show_report_generation_page():
             progress_bar.empty()
             status_text.empty()
             return
-    
-    # Display report preview if available
+
+    # Report preview
     if 'current_report' in st.session_state:
         report = st.session_state.current_report
-        
+
         st.markdown("---")
         st.markdown("## Report Preview")
-        
-        # Report title
         st.markdown(f"# {report['title']}")
         st.markdown("---")
-        
-        # Metadata section
+
         with st.expander("Report Metadata", expanded=False):
             st.markdown(f"**Generated:** {report['metadata']['generated_at']}")
             st.markdown(f"**Author:** {report['metadata']['author']}")
             st.markdown(f"**Datasets:** {', '.join(report['metadata']['datasets'])}")
-            st.markdown(f"**Dataset IDs:** {', '.join([str(id) for id in report['metadata']['dataset_ids']])}")
-        
-        # Executive summary
+
         st.markdown("## Executive Summary")
         st.markdown(report['executive_summary'])
         st.markdown("---")
-        
-        # Statistical summaries
+
         st.markdown("## Statistical Summaries")
-        
         for summary in report['statistical_summaries']:
             st.markdown(f"### {summary['dataset_name']}")
-            
             col1, col2 = st.columns(2)
             with col1:
                 st.metric("Dataset Type", summary['dataset_type'].title())
             with col2:
                 st.metric("Total Records", summary['row_count'])
-            
-            # Display statistics
+
             if summary.get('statistics'):
                 st.markdown("#### Key Statistics")
-                
                 for metric_name, stats in summary['statistics'].items():
                     with st.expander(f"{metric_name}", expanded=False):
                         cols = st.columns(5)
-                        
-                        if 'mean' in stats:
-                            cols[0].metric("Mean", f"{stats['mean']:.2f}")
-                        if 'median' in stats:
-                            cols[1].metric("Median", f"{stats['median']:.2f}")
-                        if 'std_dev' in stats:
-                            cols[2].metric("Std Dev", f"{stats['std_dev']:.2f}")
-                        if 'count' in stats:
-                            cols[3].metric("Count", stats['count'])
+                        if 'mean' in stats: cols[0].metric("Mean", f"{stats['mean']:.2f}")
+                        if 'median' in stats: cols[1].metric("Median", f"{stats['median']:.2f}")
+                        if 'std_dev' in stats: cols[2].metric("Std Dev", f"{stats['std_dev']:.2f}")
+                        if 'count' in stats: cols[3].metric("Count", stats['count'])
                         if 'min' in stats and 'max' in stats:
                             cols[4].metric("Range", f"{stats['min']:.2f} - {stats['max']:.2f}")
-            
-            # Display categorical counts
+
             if summary.get('categorical_counts'):
                 st.markdown("#### Categorical Distributions")
-                
                 for category_name, counts in summary['categorical_counts'].items():
                     with st.expander(f"{category_name}", expanded=False):
-                        # Display as columns
                         items = list(counts.items())
-                        num_cols = min(4, len(items))
-                        cols = st.columns(num_cols)
-                        
+                        cols = st.columns(min(4, len(items)))
                         for i, (value, count) in enumerate(items):
-                            cols[i % num_cols].metric(str(value), count)
-            
+                            cols[i % len(cols)].metric(str(value), count)
             st.markdown("---")
-        
-        # Visualizations
+
         if report.get('visualizations'):
             st.markdown("## Visualizations")
-            st.markdown(f"**{len(report['visualizations'])} visualization(s) included**")
-            
             for viz in report['visualizations']:
                 st.markdown(f"### {viz['title']}")
                 st.plotly_chart(viz['figure'], use_container_width=True)
-            
             st.markdown("---")
-        
-        # Qualitative analysis
+
         if report.get('qualitative_analysis'):
             st.markdown("## Qualitative Analysis")
             qual = report['qualitative_analysis']
-            
             if qual.get('sentiment_distribution'):
                 st.markdown("### Sentiment Distribution")
-                
                 sentiment_dist = qual['sentiment_distribution']
                 total = sum(sentiment_dist.values())
-                
                 cols = st.columns(len(sentiment_dist))
                 for i, (sentiment, count) in enumerate(sentiment_dist.items()):
-                    percentage = (count / total * 100) if total > 0 else 0
-                    cols[i].metric(sentiment.title(), f"{count} ({percentage:.1f}%)")
-            
+                    pct = (count / total * 100) if total > 0 else 0
+                    cols[i].metric(sentiment.title(), f"{count} ({pct:.1f}%)")
             st.markdown("---")
-        
-        # Theme summaries
+
         if report.get('theme_summaries'):
             st.markdown("## Identified Themes")
-            
             for theme in report['theme_summaries']:
                 with st.expander(f"{theme['name']} ({theme['frequency']} occurrences)", expanded=False):
                     st.markdown(f"**Keywords:** {', '.join(theme['keywords'])}")
-                    
                     if theme.get('quotes'):
                         st.markdown("**Representative Quotes:**")
                         for quote in theme['quotes']:
                             st.markdown(f"> {quote}")
-            
             st.markdown("---")
-        
-        # Citations
+
         if report.get('citations'):
             st.markdown("## Data Sources")
             for citation in report['citations']:
                 st.markdown(f"- {citation}")
-            
             st.markdown("---")
-        
-        # Export section
+
         st.markdown("## Export Report")
-        
         col1, col2 = st.columns(2)
-        
         with col1:
-            # Export as Markdown
             try:
-                markdown_bytes, actual_format = report_generator.export_report(report, format='markdown')
-                st.download_button(
-                    "Download as Markdown",
-                    data=markdown_bytes,
+                md_bytes, _ = report_generator.export_report(report, format='markdown')
+                st.download_button("Download as Markdown", data=md_bytes,
                     file_name=f"{report['title'].replace(' ', '_')}.md",
-                    mime="text/markdown",
-                    use_container_width=True,
-                    help="Download report as Markdown file"
-                )
+                    mime="text/markdown", use_container_width=True)
             except Exception as e:
                 st.error(f"Error exporting Markdown: {str(e)}")
         
@@ -1645,14 +1683,14 @@ def show_report_generation_page():
             except Exception as e:
                 st.warning("PDF export not available. Please use Markdown export.")
                 st.caption(f"Error: {str(e)}")
-    
-    # Display visualization warnings if any
-    if report.get('metadata', {}).get('visualization_warnings'):
-        st.markdown("---")
-        st.warning("Visualization Warnings")
-        st.caption("Some visualizations could not be generated due to insufficient data:")
-        for warning in report['metadata']['visualization_warnings']:
-            st.caption(f"• {warning}")
+        
+        # Display visualization warnings if any
+        if report.get('metadata', {}).get('visualization_warnings'):
+            st.markdown("---")
+            st.warning("Visualization Warnings")
+            st.caption("Some visualizations could not be generated due to insufficient data:")
+            for warning in report['metadata']['visualization_warnings']:
+                st.caption(f"- {warning}")
     
     # Help section
     st.markdown("---")
@@ -2230,6 +2268,13 @@ def show_data_governance_page():
 
 def main():
     """Main application entry point."""
+    # Run any pending DB migrations
+    from modules.database import migrate_database
+    try:
+        migrate_database()
+    except Exception:
+        pass  # Non-fatal - app still works without migration
+
     # Initialize session state for authentication
     auth.init_session_state(st.session_state)
     
@@ -2256,21 +2301,35 @@ def show_quantitative_analysis_page():
     if not datasets:
         st.info("No datasets available. Please upload data in the Data Upload section.")
         return
-    
+
+    # Classify and label datasets
+    def _label(d):
+        info = csv_handler.classify_dataset_for_analysis(d)
+        tag = "Recommended" if info['recommended'] == 'quantitative' else "Not ideal"
+        return f"{d['name']} (ID: {d['id']}, {d['dataset_type']}) - {tag}"
+
+    dataset_options = {_label(d): d['id'] for d in datasets}
+    quant_datasets = [d for d in datasets if d['dataset_type'] in ('usage', 'circulation')]
+    default_label = next((_label(d) for d in quant_datasets), list(dataset_options.keys())[0])
+
     # Dataset selector
     st.markdown("### Select Dataset")
-    dataset_options = {f"{d['name']} (ID: {d['id']}, Type: {d['dataset_type']})": d['id'] for d in datasets}
-    selected_dataset_name = st.selectbox(
+    selected_label = st.selectbox(
         "Choose a dataset to analyze",
         options=list(dataset_options.keys()),
+        index=list(dataset_options.keys()).index(default_label),
         key="quant_dataset_selector"
     )
     
-    if not selected_dataset_name:
-        return
-    
-    selected_dataset_id = dataset_options[selected_dataset_name]
+    selected_dataset_id = dataset_options[selected_label]
     selected_dataset = next(d for d in datasets if d['id'] == selected_dataset_id)
+    analysis_info = csv_handler.classify_dataset_for_analysis(selected_dataset)
+
+    # Show suitability banner
+    if analysis_info['recommended'] == 'quantitative':
+        st.success(analysis_info['reason'])
+    else:
+        st.warning(f"{analysis_info['reason']} Consider using a usage or circulation dataset instead.")
     
     # Display dataset info
     col1, col2, col3 = st.columns(3)
@@ -2817,6 +2876,166 @@ def show_quantitative_analysis_page():
                     file_name=f"quantitative_analysis_{results_data['analysis_id']}.json",
                     mime="application/json"
                 )
+
+
+def show_logs_page():
+    """Logs & Monitoring dashboard - application logs, errors, performance, and audit trail."""
+    import pandas as pd
+    from modules.logging_service import get_recent_logs, get_error_summary, get_operation_stats, get_access_log_summary
+
+    st.title("Logs & Monitoring")
+    st.markdown("Real-time visibility into application activity, errors, and performance.")
+
+    # Controls
+    col_h, col_r = st.columns([4, 1])
+    with col_r:
+        if st.button("Refresh", use_container_width=True):
+            st.rerun()
+
+    hours = st.select_slider(
+        "Time window",
+        options=[1, 6, 12, 24, 48, 168],
+        value=24,
+        format_func=lambda h: f"Last {h}h" if h < 168 else "Last 7 days",
+    )
+
+    tab_overview, tab_logs, tab_errors, tab_perf, tab_audit = st.tabs(
+        ["Overview", "Application Logs", "Errors", "Performance", "Audit Trail"]
+    )
+
+    # Overview
+    with tab_overview:
+        logs = get_recent_logs(limit=500)
+        errors = get_error_summary(hours=hours)
+        ops = get_operation_stats(hours=hours)
+
+        total = len(logs)
+        err_count = sum(r["count"] for r in errors)
+        warn_count = sum(1 for l in logs if l.get("level") == "WARNING")
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Total Log Entries", total)
+        c2.metric("Errors (window)", err_count, delta=None)
+        c3.metric("Warnings (all)", warn_count)
+        c4.metric("Operations Tracked", len(ops))
+
+        if ops:
+            st.markdown("#### Operation Summary")
+            ops_df = pd.DataFrame(ops)
+            st.dataframe(ops_df, use_container_width=True, hide_index=True)
+
+        if errors:
+            st.markdown("#### Error Breakdown by Module")
+            err_df = pd.DataFrame(errors)
+            st.dataframe(err_df, use_container_width=True, hide_index=True)
+        else:
+            st.success(f"No errors in the last {hours}h.")
+
+    # Application Logs
+    with tab_logs:
+        col_lv, col_mod = st.columns(2)
+        with col_lv:
+            level_filter = st.selectbox(
+                "Level", ["All", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+            )
+        with col_mod:
+            module_filter = st.text_input("Module contains", placeholder="e.g. csv_handler")
+
+        logs = get_recent_logs(
+            limit=300,
+            level=None if level_filter == "All" else level_filter,
+            module=module_filter or None,
+        )
+
+        if not logs:
+            st.info("No log entries match the current filters.")
+        else:
+            df = pd.DataFrame(logs)[["timestamp", "level", "module", "function", "message"]]
+            # Colour-code level column
+            def _colour(val):
+                colours = {"ERROR": "background-color:#ffd6d6", "CRITICAL": "background-color:#ff9999",
+                           "WARNING": "background-color:#fff3cd", "INFO": "", "DEBUG": "color:#888"}
+                return colours.get(val, "")
+            st.dataframe(
+                df.style.map(_colour, subset=["level"]),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+            # Download
+            st.download_button(
+                "Download as CSV",
+                data=df.to_csv(index=False),
+                file_name="app_logs.csv",
+                mime="text/csv",
+            )
+
+    # Errors
+    with tab_errors:
+        error_logs = get_recent_logs(limit=200, level="ERROR")
+        critical_logs = get_recent_logs(limit=50, level="CRITICAL")
+        all_errors = critical_logs + error_logs
+
+        if not all_errors:
+            st.success("No errors recorded.")
+        else:
+            for entry in all_errors[:50]:
+                with st.expander(
+                    f"[{entry['level']}] {entry['timestamp'][:19]}  -  {entry['module']}.{entry['function']}",
+                    expanded=False,
+                ):
+                    st.markdown(f"**Message:** {entry['message']}")
+                    if entry.get("exception"):
+                        st.code(entry["exception"], language="python")
+                    if entry.get("context"):
+                        st.json(entry["context"])
+
+    # Performance
+    with tab_perf:
+        ops = get_operation_stats(hours=hours)
+        if not ops:
+            st.info("No performance data yet. Operations are tracked automatically once you use the app.")
+        else:
+            df = pd.DataFrame(ops)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+
+            # Bar chart of avg duration
+            try:
+                import plotly.express as px
+                fig = px.bar(
+                    df,
+                    x="operation",
+                    y="avg_ms",
+                    error_y=None,
+                    labels={"avg_ms": "Avg duration (ms)", "operation": "Operation"},
+                    title=f"Average Operation Duration (last {hours}h)",
+                    color="avg_ms",
+                    color_continuous_scale="Blues",
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            except Exception:
+                pass
+
+    # Audit Trail
+    with tab_audit:
+        audit = get_access_log_summary(hours=hours)
+        if not audit:
+            st.info("No audit events in the selected window.")
+        else:
+            df = pd.DataFrame(audit)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.download_button(
+                "Download Audit Log",
+                data=df.to_csv(index=False),
+                file_name="audit_log.csv",
+                mime="text/csv",
+            )
+
+    # Log file links
+    st.markdown("---")
+    st.markdown("#### Log Files on Disk")
+    from modules.logging_service import APP_LOG_FILE, ERROR_LOG_FILE
+    st.code(f"Application log : {APP_LOG_FILE}\nErrors only     : {ERROR_LOG_FILE}")
 
 
 if __name__ == "__main__":

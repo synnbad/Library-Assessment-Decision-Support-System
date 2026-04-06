@@ -97,6 +97,9 @@ from modules.database import execute_query, execute_update
 from modules.csv_handler import update_data_provenance
 from modules.pii_detector import redact_pii, redact_pii_from_list
 from config.settings import Settings
+from modules.logging_service import get_logger, log_operation
+
+logger = get_logger(__name__)
 
 # Try to import enhanced sentiment analyzer
 try:
@@ -179,6 +182,7 @@ def analyze_sentiment(text: str) -> Dict[str, Any]:
         }
 
 
+@log_operation("sentiment_analysis")
 def analyze_dataset_sentiment(dataset_id: int) -> Dict[str, Any]:
     """
     Analyze sentiment for all responses in a dataset.
@@ -280,6 +284,7 @@ def analyze_dataset_sentiment(dataset_id: int) -> Dict[str, Any]:
     return result
 
 
+@log_operation("theme_extraction")
 def extract_themes(
     dataset_id: int,
     n_themes: Optional[int] = None

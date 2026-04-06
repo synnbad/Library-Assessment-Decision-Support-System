@@ -86,14 +86,74 @@ Author: FERPA-Compliant RAG DSS Team
 
 import sqlite3
 import json
+import time
+import random
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Any, Callable, TypeVar
+from functools import wraps
 from config.settings import Settings
 
 
 # Database schema version for migrations
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 3
+
+# Retry configuration for database locks
+MAX_RETRIES = 5
+INITIAL_BACKOFF_MS = 100
+MAX_BACKOFF_MS = 5000
+
+T = TypeVar('T')
+
+
+def retry_on_db_lock(max_retries: int = MAX_RETRIES) -> Callable:
+    """
+    Decorator to retry database operations on lock errors with exponential backoff.
+    
+    Args:
+        max_retries: Maximum number of retry attempts
+        
+    Returns:
+        Decorated function that retries on sqlite3.OperationalError
+        
+    Example:
+        @retry_on_db_lock(max_retries=5)
+        def my_db_operation():
+            # Database operation that might encounter locks
+            pass
+    """
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        @wraps(func)
+        def wrapper(*args, **kwargs) -> T:
+            last_exception = None
+            backoff_ms = INITIAL_BACKOFF_MS
+            
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except sqlite3.OperationalError as e:
+                    last_exception = e
+                    error_msg = str(e).lower()
+                    
+                    # Only retry on database lock errors
+                    if 'locked' not in error_msg and 'busy' not in error_msg:
+                        raise
+                    
+                    # Don't sleep on the last attempt
+                    if attempt < max_retries - 1:
+                        # Add jitter to prevent thundering herd
+                        jitter = random.uniform(0, backoff_ms * 0.1)
+                        sleep_time = (backoff_ms + jitter) / 1000.0
+                        time.sleep(sleep_time)
+                        
+                        # Exponential backoff with cap
+                        backoff_ms = min(backoff_ms * 2, MAX_BACKOFF_MS)
+            
+            # All retries exhausted
+            raise last_exception
+        
+        return wrapper
+    return decorator
 
 
 def init_database(db_path: Optional[str] = None) -> None:
@@ -111,6 +171,13 @@ def init_database(db_path: Optional[str] = None) -> None:
     
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
+    
+    # Enable WAL mode for better concurrent write performance
+    # WAL mode allows multiple readers and one writer to operate concurrently
+    cursor.execute("PRAGMA journal_mode=WAL")
+    
+    # Set busy timeout to 5 seconds (5000ms) as additional protection
+    cursor.execute("PRAGMA busy_timeout=5000")
     
     # Create datasets table with FAIR/CARE metadata
     cursor.execute("""
@@ -130,7 +197,13 @@ def init_database(db_path: Optional[str] = None) -> None:
             -- CARE metadata
             usage_notes TEXT,
             ethical_considerations TEXT,
-            data_provenance TEXT
+            data_provenance TEXT,
+            -- Analysis capabilities (JSON)
+            analysis_capabilities TEXT,
+            -- Indexing status tracking
+            indexing_status TEXT DEFAULT 'pending',
+            indexing_error TEXT,
+            indexed_at TIMESTAMP
         )
     """)
     
@@ -265,6 +338,26 @@ def init_database(db_path: Optional[str] = None) -> None:
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_quantitative_analyses_dataset ON quantitative_analyses(dataset_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_quantitative_analyses_type ON quantitative_analyses(analysis_type)")
     
+    # Create application_logs table (centralized structured logging)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS application_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            level TEXT NOT NULL,
+            module TEXT,
+            function TEXT,
+            message TEXT,
+            context TEXT,
+            exception TEXT
+        )
+    """)
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_app_logs_timestamp ON application_logs(timestamp)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_app_logs_level ON application_logs(level)"
+    )
+
     # Create schema_version table for migrations
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS schema_version (
@@ -305,6 +398,12 @@ def get_db_connection(db_path: Optional[str] = None):
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row  # Enable column access by name
     
+    # Enable WAL mode for concurrent writes
+    conn.execute("PRAGMA journal_mode=WAL")
+    
+    # Set busy timeout to 5 seconds
+    conn.execute("PRAGMA busy_timeout=5000")
+    
     try:
         yield conn
         conn.commit()
@@ -315,6 +414,7 @@ def get_db_connection(db_path: Optional[str] = None):
         conn.close()
 
 
+@retry_on_db_lock()
 def execute_query(query: str, params: tuple = (), db_path: Optional[str] = None) -> list:
     """
     Execute a SELECT query and return results.
@@ -334,6 +434,7 @@ def execute_query(query: str, params: tuple = (), db_path: Optional[str] = None)
         return [dict(row) for row in rows]
 
 
+@retry_on_db_lock()
 def execute_update(query: str, params: tuple = (), db_path: Optional[str] = None) -> int:
     """
     Execute an INSERT, UPDATE, or DELETE query.
@@ -373,13 +474,39 @@ def migrate_database(db_path: Optional[str] = None) -> None:
         # Apply migrations
         if current_version < SCHEMA_VERSION:
             print(f"Migrating database from version {current_version} to {SCHEMA_VERSION}")
-            
-            # Add migration logic here as schema evolves
-            # Example:
-            # if current_version < 2:
-            #     cursor.execute("ALTER TABLE datasets ADD COLUMN new_field TEXT")
-            #     cursor.execute("INSERT INTO schema_version (version) VALUES (2)")
-            
+
+            if current_version < 2:
+                # Add analysis_capabilities column to datasets
+                try:
+                    cursor.execute(
+                        "ALTER TABLE datasets ADD COLUMN analysis_capabilities TEXT"
+                    )
+                except Exception:
+                    pass  # Column may already exist
+                cursor.execute("INSERT OR IGNORE INTO schema_version (version) VALUES (2)")
+
+            if current_version < 3:
+                # Add indexing status tracking columns
+                try:
+                    cursor.execute(
+                        "ALTER TABLE datasets ADD COLUMN indexing_status TEXT DEFAULT 'pending'"
+                    )
+                except Exception:
+                    pass  # Column may already exist
+                try:
+                    cursor.execute(
+                        "ALTER TABLE datasets ADD COLUMN indexing_error TEXT"
+                    )
+                except Exception:
+                    pass
+                try:
+                    cursor.execute(
+                        "ALTER TABLE datasets ADD COLUMN indexed_at TIMESTAMP"
+                    )
+                except Exception:
+                    pass
+                cursor.execute("INSERT OR IGNORE INTO schema_version (version) VALUES (3)")
+
             print("Database migration completed")
         else:
             print(f"Database is up to date (version {current_version})")

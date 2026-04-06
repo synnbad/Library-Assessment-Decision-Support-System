@@ -60,10 +60,11 @@ Verify user credentials.
 
 **Example:**
 ```python
-if auth.authenticate("admin", "secure_password"):
+is_valid, error_msg = auth.authenticate("admin", "secure_password")
+if is_valid:
     print("Login successful")
 else:
-    print("Invalid credentials")
+    print(f"Login failed: {error_msg}")
 ```
 
 #### `log_access(username: str, action: str, resource_type: Optional[str] = None, resource_id: Optional[str] = None, details: Optional[str] = None) -> None`

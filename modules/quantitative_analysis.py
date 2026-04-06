@@ -124,10 +124,34 @@ import numpy as np
 import json
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
+
+
+class _NumpyEncoder(json.JSONEncoder):
+    """JSON encoder that handles numpy and Python types from scipy/pandas."""
+    def default(self, obj):
+        if isinstance(obj, (np.integer,)):
+            return int(obj)
+        if isinstance(obj, (np.floating,)):
+            return float(obj)
+        if isinstance(obj, (np.bool_,)):
+            return bool(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, float) and (obj != obj):  # NaN
+            return None
+        return super().default(obj)
+
+
+def _safe_json_dumps(obj: Any) -> str:
+    """Serialize obj to JSON, converting numpy types automatically."""
+    return json.dumps(obj, cls=_NumpyEncoder)
 import ollama
 from config.settings import Settings
 from modules.database import execute_query, execute_update
 from modules.pii_detector import redact_pii
+from modules.logging_service import get_logger, log_operation
+
+logger = get_logger(__name__)
 
 # Module-level constants
 CORRELATION_METHODS = ['pearson', 'spearman', 'kendall']
@@ -162,6 +186,7 @@ ZSCORE_THRESHOLD = 3.0
 TOP_CORRELATIONS = 10
 
 
+@log_operation("correlation_analysis")
 def calculate_correlation(
     dataset_id: int,
     method: str = 'pearson',
@@ -340,6 +365,7 @@ def calculate_correlation(
     return results
 
 
+@log_operation("trend_analysis")
 def calculate_trend(
     dataset_id: int,
     date_column: str,
@@ -1133,14 +1159,23 @@ def _load_dataset_data(dataset_id: int, db_path: Optional[str] = None) -> pd.Dat
                 f"Please upload data before performing analysis."
             )
         
-        # Convert to DataFrame
         df = pd.DataFrame(rows)
         
-        # Validate DataFrame is not empty
         if df.empty:
             raise ValueError(
                 f"Dataset {dataset_id} loaded but contains no rows. "
                 f"Please ensure the dataset has been populated with data."
+            )
+
+        # Check if there are any numeric columns for quantitative analysis
+        numeric_cols = df.select_dtypes(include='number').columns.tolist()
+        # Exclude internal ID columns
+        numeric_cols = [c for c in numeric_cols if c not in ('id', 'dataset_id')]
+        if not numeric_cols:
+            raise ValueError(
+                "Survey datasets contain text responses and have no numeric columns "
+                "suitable for correlation analysis. "
+                "Please use a usage or circulation dataset, or run Qualitative Analysis instead."
             )
         
         return df
@@ -1162,7 +1197,6 @@ def _load_dataset_data(dataset_id: int, db_path: Optional[str] = None) -> pd.Dat
         # Convert to DataFrame
         df = pd.DataFrame(rows)
         
-        # Validate DataFrame is not empty
         if df.empty:
             raise ValueError(
                 f"Dataset {dataset_id} loaded but contains no rows. "
@@ -1170,28 +1204,26 @@ def _load_dataset_data(dataset_id: int, db_path: Optional[str] = None) -> pd.Dat
             )
         
         # Pivot the data so each metric becomes a column
-        # This allows correlation analysis between different metrics
         if 'metric_name' in df.columns and 'metric_value' in df.columns:
-            # Group by date (if available) and pivot metrics to columns
+            # Ensure metric_value is numeric
+            df['metric_value'] = pd.to_numeric(df['metric_value'], errors='coerce')
+
             if 'date' in df.columns:
-                df_pivot = df.pivot_table(
+                # For circulation data, aggregate counts per date+metric before pivoting
+                # so we don't get sparse NaN-filled columns after pivot
+                df_agg = df.groupby(['date', 'metric_name'], as_index=False)['metric_value'].sum()
+                df_pivot = df_agg.pivot_table(
                     index='date',
                     columns='metric_name',
                     values='metric_value',
-                    aggfunc='mean'  # Average if multiple values per date
+                    aggfunc='sum'
                 )
+                # Fill NaN with 0 for count-based metrics (e.g. circulation)
+                # only if the dataset is circulation type
+                if dataset_type == 'circulation':
+                    df_pivot = df_pivot.fillna(0)
                 df_pivot.reset_index(inplace=True)
-                
-                # Validate pivoted data is not empty
-                if df_pivot.empty:
-                    raise ValueError(
-                        f"Dataset {dataset_id} contains no valid data after processing. "
-                        f"Please check that the dataset has proper metric values."
-                    )
-                
-                return df_pivot
             else:
-                # If no date column, just pivot by row index
                 df['row_id'] = df.index
                 df_pivot = df.pivot_table(
                     index='row_id',
@@ -1200,15 +1232,14 @@ def _load_dataset_data(dataset_id: int, db_path: Optional[str] = None) -> pd.Dat
                     aggfunc='first'
                 )
                 df_pivot.reset_index(drop=True, inplace=True)
-                
-                # Validate pivoted data is not empty
-                if df_pivot.empty:
-                    raise ValueError(
-                        f"Dataset {dataset_id} contains no valid data after processing. "
-                        f"Please check that the dataset has proper metric values."
-                    )
-                
-                return df_pivot
+
+            if df_pivot.empty:
+                raise ValueError(
+                    f"Dataset {dataset_id} contains no valid data after processing. "
+                    f"Please check that the dataset has proper metric values."
+                )
+            
+            return df_pivot
         else:
             return df
     
@@ -2722,8 +2753,8 @@ def store_analysis_results(
     recommendations = results.get('recommendations', None)
     
     # Convert to JSON strings for storage
-    parameters_json = json.dumps(parameters)
-    statistical_results_json = json.dumps(statistical_results)
+    parameters_json = _safe_json_dumps(parameters)
+    statistical_results_json = _safe_json_dumps(statistical_results)
     
     # Prepare SQL query
     query = """
@@ -3027,8 +3058,10 @@ def create_correlation_heatmap(
         texttemplate='%{text}',
         textfont={"size": 10},
         colorbar=dict(
-            title="Correlation",
-            titleside="right",
+            title=dict(
+                text="Correlation",
+                side="right"
+            ),
             tickmode="linear",
             tick0=-1,
             dtick=0.5

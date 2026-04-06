@@ -78,7 +78,8 @@ class Settings:
     PII_PATTERNS = {
         "email": r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
         "phone": r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b',
-        "ssn": r'\b\d{3}-\d{2}-\d{4}\b'
+        "ssn": r'\b\d{3}-\d{2}-\d{4}\b',
+        "address": r'\b\d+\s+[A-Za-z0-9\s,]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Court|Ct|Circle|Cir|Way)\b'
     }
     
     # Logging configuration

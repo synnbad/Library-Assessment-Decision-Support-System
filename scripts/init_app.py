@@ -22,14 +22,14 @@ def main():
     password = "admin123"
     
     if create_user(username, password):
-        print(f"✓ User '{username}' created successfully")
+        print(f"User '{username}' created successfully")
         print(f"  Username: {username}")
         print(f"  Password: {password}")
-        print("\n⚠️  Please change the default password after first login!")
+        print("\nWARNING: Please change the default password after first login!")
     else:
-        print(f"ℹ User '{username}' already exists")
+        print(f"User '{username}' already exists")
     
-    print("\n✓ Application initialization complete!")
+    print("\nApplication initialization complete!")
     print("\nTo start the application, run:")
     print("  streamlit run streamlit_app.py")
 
