@@ -849,7 +849,12 @@ The Family Educational Rights and Privacy Act (FERPA) is a federal law that prot
 
 ### Ollama Issues
 
-#### Problem: "Cannot connect to Ollama"
+#### Problem: "Cannot connect to Ollama" or "Ollama Connection Error"
+
+**Symptoms:**
+- Error message: "Ollama Connection Error - The Ollama service is not responding"
+- Query interface shows connection error
+- Application displays recovery instructions
 
 **Solution:**
 1. Check if Ollama is running:
@@ -860,8 +865,32 @@ The Family Educational Rights and Privacy Act (FERPA) is a federal law that prot
    ```bash
    curl http://localhost:11434
    ```
-3. Restart Ollama service
-4. Check firewall settings
+3. Verify model is available:
+   ```bash
+   ollama list
+   ```
+4. Pull model if missing:
+   ```bash
+   ollama pull llama3.2:3b
+   ```
+5. Restart Ollama service
+6. Check firewall settings
+
+**Note:** The system now handles Ollama crashes gracefully. If Ollama stops responding, you'll see a clear error message with recovery instructions. The application will not hang or freeze.
+
+#### Problem: "Request Timeout" after 30 seconds
+
+**Symptoms:**
+- Error message: "Request Timeout - The response generation timed out after 30 seconds"
+- Query takes too long to process
+
+**Solution:**
+- Ask a simpler or more specific question
+- Break complex questions into smaller parts
+- Clear conversation context (reduces processing load)
+- Check system resources (CPU/memory usage)
+- Close other applications to free up resources
+- Consider using a smaller model for faster responses
 
 #### Problem: "Model not found"
 
@@ -883,6 +912,7 @@ The Family Educational Rights and Privacy Act (FERPA) is a federal law that prot
 - Use a smaller model (llama3.2:3b instead of larger models)
 - Consider using a computer with more RAM or a GPU
 - Reduce the number of concurrent queries
+- Clear conversation history to reduce context size
 
 ### Application Issues
 
