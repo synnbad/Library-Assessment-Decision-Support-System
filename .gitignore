@@ -100,3 +100,20 @@ ENCODING_FIX_SUMMARY.md
 FLEXIBLE_VALIDATION_UPDATE.md
 FEATURE_METADATA_AUTOFILL_SUMMARY.md
 SYSTEM_TEST_RESULTS.md
+
+# Task implementation summaries (temporary working files)
+TASK_*_IMPLEMENTATION_SUMMARY.md
+
+# Edge case analysis (working documents - keep final in docs/)
+EDGE_CASE_ANALYSIS.md
+EDGE_CASE_MASTER_INDEX.md
+EXTREME_EDGE_CASE_ANALYSIS.md
+
+# Kiro monitoring and utility files
+.kiro/monitor_streamlit_errors.py
+.kiro/check_errors.sh
+.kiro/capture_error_context.sh
+.kiro/error_context_*.txt
+.kiro/*_FIX.md
+.kiro/*_GUIDE.md
+.kiro/ERROR_*.md
