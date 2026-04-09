@@ -24,7 +24,7 @@ def main():
     if create_user(username, password):
         print(f"User '{username}' created successfully")
         print(f"  Username: {username}")
-        print(f"  Password: {password}")
+        print("  Password: [REDACTED]")
         print("\nWARNING: Please change the default password after first login!")
     else:
         print(f"User '{username}' already exists")
