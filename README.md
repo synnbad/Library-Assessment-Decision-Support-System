@@ -53,12 +53,24 @@ Default credentials: `admin` / `admin123` (change immediately after first login)
 ## Project Structure
 
 ```
-streamlit_app.py          # Main application
-modules/                  # Core functionality
+streamlit_app.py          # Main application orchestrator
+ui/                       # User interface modules
+├── auth_ui.py           # Login/logout interface
+├── home_ui.py           # Dashboard and system status
+├── data_upload_ui.py    # CSV upload interface
+├── query_ui.py          # RAG chat interface
+├── qualitative_ui.py    # Qualitative analysis interface
+├── quantitative_ui.py   # Quantitative analysis interface
+├── visualization_ui.py  # Chart generation interface
+├── report_ui.py         # Report generation interface
+├── governance_ui.py     # FAIR/CARE documentation
+└── logs_ui.py           # Logs and monitoring
+modules/                  # Core business logic
 ├── auth.py              # Authentication
-├── csv_handler.py       # Data upload
+├── csv_handler.py       # Data upload and validation
 ├── database.py          # Data storage
 ├── rag_query.py         # Query engine
+├── rag_evaluation.py    # RAG quality metrics
 ├── qualitative_analysis.py
 ├── quantitative_analysis.py
 ├── report_generator.py

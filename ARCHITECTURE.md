@@ -32,7 +32,7 @@ The Library Assessment Decision Support System is a single-application Streamlit
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Streamlit Application                    │
+│              Streamlit Application Orchestrator              │
 │                      (streamlit_app.py)                      │
 └───────────────────────────┬─────────────────────────────────┘
                             │
@@ -40,46 +40,149 @@ The Library Assessment Decision Support System is a single-application Streamlit
         │                   │                   │
         ▼                   ▼                   ▼
 ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│     Auth     │    │ CSV Handler  │    │  RAG Query   │
-│  (auth.py)   │    │(csv_handler) │    │ (rag_query)  │
-└──────┬───────┘    └──────┬───────┘    └──────┬───────┘
-       │                   │                   │
-       │                   │                   │
-       ▼                   ▼                   ▼
-┌──────────────────────────────────────────────────────┐
-│                    Database Layer                     │
-│                   (database.py)                       │
-└───────────────────┬──────────────────────────────────┘
-                    │
-        ┌───────────┼───────────┐
-        ▼           ▼           ▼
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│   SQLite DB  │  │  ChromaDB    │  │    Ollama    │
-│ (library.db) │  │ (chroma_db/) │  │ (localhost)  │
-└──────────────┘  └──────────────┘  └──────────────┘
+│  UI Modules  │    │   Business   │    │  Data Layer  │
+│    (ui/)     │───▶│   Logic      │───▶│ (database.py)│
+│              │    │  (modules/)  │    │              │
+└──────────────┘    └──────────────┘    └──────┬───────┘
+                                               │
+                            ┌──────────────────┼──────────────────┐
+                            ▼                  ▼                  ▼
+                    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+                    │   SQLite DB  │  │  ChromaDB    │  │    Ollama    │
+                    │ (library.db) │  │ (chroma_db/) │  │ (localhost)  │
+                    └──────────────┘  └──────────────┘  └──────────────┘
 ```
 
 ## Module Architecture
 
-### Core Modules
+### Application Structure
 
-#### 1. streamlit_app.py (Main Application)
-**Purpose:** Entry point and UI orchestration
+The application follows a three-tier architecture:
+
+1. **UI Layer (ui/)**: Streamlit page components for user interaction
+2. **Business Logic Layer (modules/)**: Core functionality and data processing
+3. **Data Layer (modules/database.py)**: Database access and persistence
+
+### UI Modules (ui/)
+
+The Streamlit application is modularized into 10 UI components, each responsible for a specific page or feature. The main `streamlit_app.py` file serves as an orchestrator (~200 lines), handling routing and initialization.
+
+#### ui/auth_ui.py (Authentication Interface)
+**Purpose:** Login and logout UI components
 
 **Key Functions:**
+- `show_login_page()` - Display login form with authentication
+- `show_logout_button()` - Display logout button in sidebar
 
-- `show_login_page()` - Authentication UI
-- `show_main_app()` - Main navigation and page routing
-- `show_home_page()` - Dashboard and system status
-- `show_data_upload_page()` - CSV upload interface
-- `show_query_interface_page()` - RAG chat interface
-- `show_qualitative_analysis_page()` - Qualitative analysis UI
-- `show_quantitative_analysis_page()` - Quantitative analysis UI
-- `show_visualizations_page()` - Chart generation UI
-- `show_report_generation_page()` - Report creation UI
-- `show_data_governance_page()` - FAIR/CARE documentation
+**Dependencies:** modules/auth
 
-**Dependencies:** All modules (auth, csv_handler, rag_query, qualitative_analysis, quantitative_analysis, visualization, report_generator)
+#### ui/home_ui.py (Dashboard)
+**Purpose:** Home page with system status and quick statistics
+
+**Key Functions:**
+- `show_home_page()` - Display dashboard
+- `display_system_status()` - Check Ollama, ChromaDB, database connectivity
+- `display_quick_stats()` - Show dataset counts and recent activity
+
+**Dependencies:** modules/database, modules/rag_query
+
+#### ui/data_upload_ui.py (Data Upload Interface)
+**Purpose:** CSV upload and dataset management
+
+**Key Functions:**
+- `show_data_upload_page()` - Display upload interface
+- `handle_file_upload()` - Process uploaded CSV files
+- `display_dataset_list()` - Show uploaded datasets with actions
+
+**Dependencies:** modules/csv_handler, modules/database
+
+#### ui/query_ui.py (RAG Chat Interface)
+**Purpose:** Natural language query interface
+
+**Key Functions:**
+- `show_query_interface_page()` - Display chat interface
+- `handle_query_submission()` - Process and display query results
+- `display_conversation_history()` - Show chat history
+
+**Dependencies:** modules/rag_query, modules/database
+
+#### ui/qualitative_ui.py (Qualitative Analysis Interface)
+**Purpose:** Sentiment analysis and theme extraction UI
+
+**Key Functions:**
+- `show_qualitative_analysis_page()` - Display analysis interface
+- `run_sentiment_analysis()` - Execute and display sentiment analysis
+- `run_theme_extraction()` - Execute and display theme identification
+
+**Dependencies:** modules/qualitative_analysis, modules/database
+
+#### ui/quantitative_ui.py (Quantitative Analysis Interface)
+**Purpose:** Statistical analysis UI
+
+**Key Functions:**
+- `show_quantitative_analysis_page()` - Display analysis interface
+- `run_correlation_analysis()` - Execute correlation analysis
+- `run_trend_analysis()` - Execute trend analysis
+- `run_comparative_analysis()` - Execute comparative analysis
+
+**Dependencies:** modules/quantitative_analysis, modules/database
+
+#### ui/visualization_ui.py (Visualization Interface)
+**Purpose:** Chart generation UI
+
+**Key Functions:**
+- `show_visualizations_page()` - Display visualization interface
+- `create_and_display_chart()` - Generate and show charts
+
+**Dependencies:** modules/visualization, modules/database
+
+#### ui/report_ui.py (Report Generation Interface)
+**Purpose:** Report creation and export UI
+
+**Key Functions:**
+- `show_report_generation_page()` - Display report interface
+- `generate_and_download_report()` - Create and provide download
+
+**Dependencies:** modules/report_generator, modules/database
+
+#### ui/governance_ui.py (Data Governance Interface)
+**Purpose:** FAIR/CARE documentation display
+
+**Key Functions:**
+- `show_data_governance_page()` - Display governance documentation
+- `display_fair_principles()` - Show FAIR implementation
+- `display_care_principles()` - Show CARE implementation
+
+**Dependencies:** modules/database
+
+#### ui/logs_ui.py (Logs and Monitoring Interface)
+**Purpose:** System logs and monitoring UI
+
+**Key Functions:**
+- `show_logs_monitoring_page()` - Display logs interface
+- `display_access_logs()` - Show access audit trail
+- `display_query_logs()` - Show query history
+
+**Dependencies:** modules/database, modules/logging_service
+
+### Core Modules (modules/)
+
+#### 1. streamlit_app.py (Main Orchestrator)
+**Purpose:** Application entry point and page routing
+
+**Key Functions:**
+- `main()` - Application entry point
+- `initialize_session_state()` - Setup session variables
+- `route_to_page()` - Navigate to selected page
+
+**Dependencies:** All ui/ modules, modules/auth
+
+**Responsibilities:**
+- Session state initialization
+- Authentication check
+- Page navigation
+- Sidebar menu
+- Global error handling
 
 #### 2. modules/auth.py (Authentication)
 **Purpose:** User authentication and session management
@@ -162,6 +265,45 @@ The Library Assessment Decision Support System is a single-application Streamlit
 - Stored in memory by session_id
 - Included in LLM prompt for follow-ups
 - Clearable by user
+
+#### 4a. modules/rag_evaluation.py (RAG Quality Metrics)
+**Purpose:** Evaluate retrieval quality for RAG system
+
+**Key Components:**
+- `RAGEvaluator` class - Evaluation engine
+- `calculate_precision_at_k(query, relevant_doc_ids, k)` - Precision@k metric
+- `calculate_recall_at_k(query, relevant_doc_ids, k)` - Recall@k metric
+- `calculate_mrr(query, relevant_doc_ids)` - Mean Reciprocal Rank
+- `evaluate_query_set(test_queries)` - Batch evaluation
+- `generate_synthetic_test_queries(dataset_id, n_queries)` - Create test queries
+- `store_evaluation_results(results, test_set_name)` - Save to database
+- `get_evaluation_history(limit)` - Retrieve past evaluations
+
+**Evaluation Metrics:**
+
+1. **Precision@k** = (# relevant docs in top k) / k
+   - Measures what fraction of retrieved documents are relevant
+   - Range: [0, 1], higher is better
+   - Example: If 3 out of 5 retrieved docs are relevant, P@5 = 0.6
+
+2. **Recall@k** = (# relevant docs in top k) / (total # relevant docs)
+   - Measures what fraction of all relevant documents were retrieved
+   - Range: [0, 1], higher is better
+   - Example: If 3 out of 10 relevant docs are in top 5, R@5 = 0.3
+
+3. **MRR** = 1 / (rank of first relevant document)
+   - Measures how quickly users find a relevant document
+   - Range: [0, 1], higher is better
+   - Returns 0 if no relevant documents found
+   - Example: First relevant doc at rank 3 → MRR = 1/3 = 0.333
+
+**Database Tables:** rag_evaluations
+
+**Usage:**
+- Generate synthetic test queries from datasets
+- Evaluate retrieval quality with ground truth
+- Track evaluation metrics over time
+- Compare different RAG configurations
 
 
 #### 5. modules/qualitative_analysis.py (NLP Analysis)

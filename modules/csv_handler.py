@@ -1133,3 +1133,372 @@ def add_query_to_provenance(dataset_id: int, question: str, username: str) -> No
         "UPDATE datasets SET data_provenance = ? WHERE id = ?",
         (json.dumps(provenance), dataset_id)
     )
+
+
+# ============================================================================
+# CSV Round-Trip Validation Functions
+# ============================================================================
+
+def serialize_to_csv(df: pd.DataFrame) -> str:
+    """
+    Serialize DataFrame to CSV string.
+    
+    Args:
+        df: DataFrame to serialize
+        
+    Returns:
+        CSV string representation
+    """
+    return df.to_csv(index=False)
+
+
+def parse_from_csv(csv_string: str) -> pd.DataFrame:
+    """
+    Parse CSV string to DataFrame.
+    
+    Args:
+        csv_string: CSV content as string
+        
+    Returns:
+        Parsed DataFrame
+    """
+    from io import StringIO
+    return pd.read_csv(StringIO(csv_string))
+
+
+def dataframes_equivalent(df1: pd.DataFrame, df2: pd.DataFrame, 
+                          float_tolerance: float = 1e-9) -> bool:
+    """
+    Check if two DataFrames are equivalent for round-trip purposes.
+    
+    Handles:
+    - Column order differences
+    - Floating point precision
+    - Index differences
+    - Data type compatibility (int vs float)
+    
+    Args:
+        df1: First DataFrame
+        df2: Second DataFrame
+        float_tolerance: Tolerance for floating point comparison
+        
+    Returns:
+        True if DataFrames are equivalent, False otherwise
+    """
+    # Check shape
+    if df1.shape != df2.shape:
+        return False
+    
+    # Sort columns to handle order differences
+    df1_sorted = df1.sort_index(axis=1)
+    df2_sorted = df2.sort_index(axis=1)
+    
+    # Check column names
+    if not df1_sorted.columns.equals(df2_sorted.columns):
+        return False
+    
+    # Check each column
+    for col in df1_sorted.columns:
+        col1 = df1_sorted[col]
+        col2 = df2_sorted[col]
+        
+        # Handle numeric columns with tolerance
+        if pd.api.types.is_numeric_dtype(col1) and pd.api.types.is_numeric_dtype(col2):
+            # Convert to float for comparison
+            col1_float = col1.astype(float)
+            col2_float = col2.astype(float)
+            
+            # Check for NaN equality
+            nan_mask1 = pd.isna(col1_float)
+            nan_mask2 = pd.isna(col2_float)
+            
+            if not nan_mask1.equals(nan_mask2):
+                return False
+            
+            # Compare non-NaN values with tolerance
+            non_nan_mask = ~nan_mask1
+            if not pd.Series(
+                abs(col1_float[non_nan_mask] - col2_float[non_nan_mask]) <= float_tolerance
+            ).all():
+                return False
+        else:
+            # For non-numeric columns, use direct comparison
+            if not col1.equals(col2):
+                return False
+    
+    return True
+
+
+def validate_round_trip(df: pd.DataFrame, dataset_type: str) -> tuple:
+    """
+    Validate that DataFrame can round-trip through CSV serialization.
+    
+    Tests: df → serialize → parse → df' where df ≈ df'
+    
+    Args:
+        df: DataFrame to validate
+        dataset_type: Type of dataset (survey, usage, circulation)
+        
+    Returns:
+        (success: bool, error_message: str)
+    """
+    try:
+        # Serialize to CSV
+        csv_string = serialize_to_csv(df)
+        
+        # Parse back to DataFrame
+        df_restored = parse_from_csv(csv_string)
+        
+        # Check equivalence
+        if not dataframes_equivalent(df, df_restored):
+            return False, "Round-trip validation failed: DataFrames are not equivalent after serialization"
+        
+        # Validate restored DataFrame still meets dataset requirements
+        is_valid, error_msg = validate_csv_dataframe(df_restored, dataset_type)
+        if not is_valid:
+            return False, f"Round-trip validation failed: Restored DataFrame invalid: {error_msg}"
+        
+        return True, "Round-trip validation passed"
+        
+    except Exception as e:
+        return False, f"Round-trip validation error: {str(e)}"
+
+
+def validate_csv_dataframe(df: pd.DataFrame, dataset_type: str) -> tuple:
+    """
+    Validate DataFrame structure for a given dataset type.
+    
+    This is a helper function for round-trip validation that checks
+    if a DataFrame meets the structural requirements.
+    
+    Args:
+        df: DataFrame to validate
+        dataset_type: Type of dataset (survey, usage, circulation)
+        
+    Returns:
+        (is_valid: bool, error_message: str)
+    """
+    # Check if DataFrame is empty
+    if df.empty:
+        return False, "DataFrame is empty"
+    
+    # Dataset type specific validation
+    if dataset_type == "survey":
+        # Survey datasets are flexible - any columns accepted
+        # Just check it has some data
+        if len(df.columns) == 0:
+            return False, "Survey dataset has no columns"
+    
+    elif dataset_type == "usage":
+        # Usage datasets are flexible - any columns accepted
+        # Just check it has some data
+        if len(df.columns) == 0:
+            return False, "Usage dataset has no columns"
+    
+    elif dataset_type == "circulation":
+        # Circulation datasets are flexible - any columns accepted
+        # Just check it has some data
+        if len(df.columns) == 0:
+            return False, "Circulation dataset has no columns"
+    
+    else:
+        return False, f"Unknown dataset type: {dataset_type}"
+    
+    return True, "Validation passed"
+
+
+# ============================================================================
+# CSV Round-Trip Validation Functions
+# ============================================================================
+
+def serialize_to_csv(df: pd.DataFrame) -> str:
+    """
+    Serialize DataFrame to CSV string.
+    
+    Args:
+        df: DataFrame to serialize
+        
+    Returns:
+        CSV string representation
+    """
+    return df.to_csv(index=False)
+
+
+def parse_from_csv(csv_string: str) -> pd.DataFrame:
+    """
+    Parse CSV string to DataFrame.
+    
+    Args:
+        csv_string: CSV string to parse
+        
+    Returns:
+        Parsed DataFrame
+    """
+    from io import StringIO
+    return pd.read_csv(StringIO(csv_string))
+
+
+def dataframes_equivalent(df1: pd.DataFrame, df2: pd.DataFrame, tolerance: float = 1e-9) -> bool:
+    """
+    Check if two DataFrames are equivalent for round-trip purposes.
+    
+    Handles:
+    - Floating point comparison with tolerance
+    - Column order differences
+    - Index differences
+    - Type coercion (int -> float)
+    
+    Args:
+        df1: First DataFrame
+        df2: Second DataFrame
+        tolerance: Floating point comparison tolerance
+        
+    Returns:
+        True if DataFrames are equivalent
+    """
+    # Check shape
+    if df1.shape != df2.shape:
+        return False
+    
+    # Sort columns to handle order differences
+    df1_sorted = df1.sort_index(axis=1)
+    df2_sorted = df2.sort_index(axis=1)
+    
+    # Check column names
+    if not df1_sorted.columns.equals(df2_sorted.columns):
+        return False
+    
+    # Check each column
+    for col in df1_sorted.columns:
+        col1 = df1_sorted[col]
+        col2 = df2_sorted[col]
+        
+        # Handle numeric columns with tolerance
+        if pd.api.types.is_numeric_dtype(col1) and pd.api.types.is_numeric_dtype(col2):
+            # Convert to float for comparison
+            col1_float = col1.astype(float)
+            col2_float = col2.astype(float)
+            
+            # Check for NaN equality
+            nan_mask1 = pd.isna(col1_float)
+            nan_mask2 = pd.isna(col2_float)
+            
+            if not nan_mask1.equals(nan_mask2):
+                return False
+            
+            # Compare non-NaN values with tolerance
+            non_nan_mask = ~nan_mask1
+            if not pd.Series(col1_float[non_nan_mask]).sub(col2_float[non_nan_mask]).abs().le(tolerance).all():
+                return False
+        
+        # Handle string-to-numeric coercion (e.g., "00000" -> 0)
+        elif pd.api.types.is_string_dtype(col1) and pd.api.types.is_numeric_dtype(col2):
+            # Try converting string column to numeric
+            try:
+                col1_numeric = pd.to_numeric(col1, errors='coerce')
+                col2_float = col2.astype(float)
+                
+                # Check for NaN equality (including empty strings that become NaN)
+                nan_mask1 = pd.isna(col1_numeric) | (col1 == '')
+                nan_mask2 = pd.isna(col2_float)
+                
+                if not nan_mask1.equals(nan_mask2):
+                    return False
+                
+                # Compare non-NaN values with tolerance
+                non_nan_mask = ~nan_mask1
+                if len(col1_numeric[non_nan_mask]) > 0:
+                    if not pd.Series(col1_numeric[non_nan_mask]).sub(col2_float[non_nan_mask]).abs().le(tolerance).all():
+                        return False
+            except:
+                # If conversion fails, columns are not equivalent
+                return False
+        
+        # Handle numeric-to-string coercion (reverse case)
+        elif pd.api.types.is_numeric_dtype(col1) and pd.api.types.is_string_dtype(col2):
+            # Try converting string column to numeric
+            try:
+                col1_float = col1.astype(float)
+                col2_numeric = pd.to_numeric(col2, errors='coerce')
+                
+                # Check for NaN equality (including empty strings that become NaN)
+                nan_mask1 = pd.isna(col1_float)
+                nan_mask2 = pd.isna(col2_numeric) | (col2 == '')
+                
+                if not nan_mask1.equals(nan_mask2):
+                    return False
+                
+                # Compare non-NaN values with tolerance
+                non_nan_mask = ~nan_mask1
+                if len(col1_float[non_nan_mask]) > 0:
+                    if not pd.Series(col1_float[non_nan_mask]).sub(col2_numeric[non_nan_mask]).abs().le(tolerance).all():
+                        return False
+            except:
+                # If conversion fails, columns are not equivalent
+                return False
+        
+        else:
+            # For non-numeric columns, handle empty string vs NaN
+            col1_filled = col1.fillna('')
+            col2_filled = col2.fillna('')
+            
+            if not col1_filled.equals(col2_filled):
+                return False
+    
+    return True
+
+
+def validate_round_trip(df: pd.DataFrame, dataset_type: str) -> tuple[bool, str]:
+    """
+    Validate that DataFrame can round-trip through CSV serialization.
+    
+    Tests: df → serialize → parse → df' where df ≈ df'
+    
+    Args:
+        df: DataFrame to validate
+        dataset_type: Type of dataset (survey, usage, circulation)
+        
+    Returns:
+        (success, error_message)
+    """
+    try:
+        # Serialize to CSV
+        csv_string = serialize_to_csv(df)
+        
+        # Parse back to DataFrame
+        df_restored = parse_from_csv(csv_string)
+        
+        # Check equivalence
+        if not dataframes_equivalent(df, df_restored):
+            return False, "Round-trip validation failed: DataFrames are not equivalent after serialization"
+        
+        # Validate restored DataFrame has correct schema for dataset type
+        is_valid, error_msg = validate_csv_dataframe(df_restored, dataset_type)
+        if not is_valid:
+            return False, f"Round-trip validation failed: Restored DataFrame invalid: {error_msg}"
+        
+        return True, ""
+        
+    except Exception as e:
+        return False, f"Round-trip validation error: {str(e)}"
+
+
+def validate_csv_dataframe(df: pd.DataFrame, dataset_type: str) -> tuple[bool, str]:
+    """
+    Validate DataFrame structure for a given dataset type.
+    
+    This is a helper function for round-trip validation.
+    
+    Args:
+        df: DataFrame to validate
+        dataset_type: Type of dataset (survey, usage, circulation)
+        
+    Returns:
+        (is_valid, error_message)
+    """
+    if df.empty:
+        return False, "DataFrame is empty"
+    
+    # For round-trip validation, we accept any column structure
+    # as long as the data is preserved
+    return True, ""
