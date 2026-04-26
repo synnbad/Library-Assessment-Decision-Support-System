@@ -85,18 +85,17 @@ Author: FERPA-Compliant RAG DSS Team
 """
 
 import sqlite3
-import json
 import time
 import random
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Optional, Any, Callable, TypeVar
+from typing import Optional, Callable, TypeVar
 from functools import wraps
 from config.settings import Settings
 
 
 # Database schema version for migrations
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 # Retry configuration for database locks
 MAX_RETRIES = 5
@@ -299,6 +298,18 @@ def init_database(db_path: Optional[str] = None) -> None:
             file_path TEXT
         )
     """)
+
+    # Create pinned report insights table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pinned_insights (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            question TEXT NOT NULL,
+            answer TEXT NOT NULL,
+            source TEXT DEFAULT 'Query',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     
     # Create qualitative_analyses table
     cursor.execute("""
@@ -338,6 +349,8 @@ def init_database(db_path: Optional[str] = None) -> None:
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_usage_statistics_dataset ON usage_statistics(dataset_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_quantitative_analyses_dataset ON quantitative_analyses(dataset_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_quantitative_analyses_type ON quantitative_analyses(analysis_type)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_pinned_insights_username ON pinned_insights(username)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_pinned_insights_created ON pinned_insights(created_at)")
     
     # Create application_logs table (centralized structured logging)
     cursor.execute("""
@@ -529,6 +542,25 @@ def migrate_database(db_path: Optional[str] = None) -> None:
                 except Exception:
                     pass
                 cursor.execute("INSERT OR IGNORE INTO schema_version (version) VALUES (3)")
+
+            if current_version < 4:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS pinned_insights (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT,
+                        question TEXT NOT NULL,
+                        answer TEXT NOT NULL,
+                        source TEXT DEFAULT 'Query',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_pinned_insights_username ON pinned_insights(username)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_pinned_insights_created ON pinned_insights(created_at)"
+                )
+                cursor.execute("INSERT OR IGNORE INTO schema_version (version) VALUES (4)")
 
             print("Database migration completed")
         else:

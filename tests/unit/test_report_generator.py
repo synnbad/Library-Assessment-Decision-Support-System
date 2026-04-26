@@ -3,7 +3,6 @@ Unit tests for report generator module.
 """
 
 import pytest
-import sqlite3
 import tempfile
 import os
 from modules.report_generator import generate_statistical_summary
@@ -180,6 +179,90 @@ def test_generate_statistical_summary_empty_dataset(test_db):
     # Verify no statistics are calculated for empty dataset
     assert len(summary['statistics']) == 0
     assert len(summary['categorical_counts']) == 0
+
+
+def test_create_report_includes_pinned_insights(monkeypatch, test_db):
+    """Pinned query insights should be included in report structure and markdown export."""
+    from modules import report_generator
+
+    dataset_id = execute_update(
+        """INSERT INTO datasets (name, dataset_type, row_count, column_names)
+           VALUES (?, ?, ?, ?)""",
+        ('test_usage', 'usage', 1, '["date", "metric_name", "metric_value"]'),
+        test_db
+    )
+    execute_update(
+        """INSERT INTO usage_statistics (dataset_id, date, metric_name, metric_value, category)
+           VALUES (?, ?, ?, ?, ?)""",
+        (dataset_id, '2024-01-01', 'visits', 100, 'library'),
+        test_db
+    )
+    monkeypatch.setattr(
+        report_generator,
+        "generate_narrative",
+        lambda summary, analysis=None: "Generated summary.",
+    )
+
+    report = report_generator.create_report(
+        [dataset_id],
+        include_viz=False,
+        pinned_insights=[
+            {
+                "question": "What should the report emphasize?",
+                "answer": "Visits are a major signal.",
+            }
+        ],
+        db_path=test_db,
+    )
+    markdown, actual_format = report_generator.export_report(report, format="markdown")
+    markdown_text = markdown.decode("utf-8")
+
+    assert actual_format == "markdown"
+    assert report["pinned_insights"][0]["question"] == "What should the report emphasize?"
+    assert "Pinned Query Insights" in markdown_text
+    assert "Visits are a major signal." in markdown_text
+
+
+def test_create_report_redacts_pii_from_pinned_insights(monkeypatch, test_db):
+    """Pinned insights should not leak PII into generated reports."""
+    from modules import report_generator
+
+    dataset_id = execute_update(
+        """INSERT INTO datasets (name, dataset_type, row_count, column_names)
+           VALUES (?, ?, ?, ?)""",
+        ('test_usage', 'usage', 1, '["date", "metric_name", "metric_value"]'),
+        test_db
+    )
+    execute_update(
+        """INSERT INTO usage_statistics (dataset_id, date, metric_name, metric_value, category)
+           VALUES (?, ?, ?, ?, ?)""",
+        (dataset_id, '2024-01-01', 'visits', 100, 'library'),
+        test_db
+    )
+    monkeypatch.setattr(
+        report_generator,
+        "generate_narrative",
+        lambda summary, analysis=None: "Generated summary.",
+    )
+
+    report = report_generator.create_report(
+        [dataset_id],
+        include_viz=False,
+        pinned_insights=[
+            {
+                "question": "Who responded?",
+                "answer": "Contact jane.doe@example.com or 555-123-4567.",
+            }
+        ],
+        db_path=test_db,
+    )
+    markdown, _ = report_generator.export_report(report, format="markdown")
+    markdown_text = markdown.decode("utf-8")
+
+    assert "jane.doe@example.com" not in markdown_text
+    assert "555-123-4567" not in markdown_text
+    assert "[EMAIL]" in markdown_text
+    assert "[PHONE]" in markdown_text
 
 
 

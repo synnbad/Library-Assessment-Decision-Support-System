@@ -23,7 +23,7 @@ import pytest
 # Try to import required modules
 try:
     from modules.rag_query import RAGQuery, get_missing_rag_dependencies
-    from modules.database import init_database, execute_update, execute_query
+    from modules.database import init_database
     from modules.csv_handler import store_dataset
     import pandas as pd
     import os
@@ -66,12 +66,12 @@ def setup_test_db():
     settings.Settings.CHROMA_DB_PATH = original_chroma_path
     try:
         os.unlink(temp_db_path)
-    except:
+    except OSError:
         pass
     try:
         import shutil
         shutil.rmtree(temp_chroma_dir, ignore_errors=True)
-    except:
+    except OSError:
         pass
 
 

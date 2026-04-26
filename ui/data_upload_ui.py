@@ -8,6 +8,8 @@ Includes file validation, metadata auto-detection, and dataset management functi
 import streamlit as st
 import json
 from modules import csv_handler, auth
+from modules import query_intelligence
+from modules import query_queue
 
 
 def show_data_upload_page():
@@ -92,7 +94,7 @@ def _show_upload_tab():
                 st.session_state.metadata_keywords = ', '.join(auto_metadata.get('keywords', []))
                 
                 st.success("Metadata auto-filled! Review and edit as needed.")
-            except UnicodeDecodeError as e:
+            except UnicodeDecodeError:
                 st.warning("Unable to auto-detect metadata due to file encoding issues. Please fill in metadata manually.")
                 st.caption("Tip: Try saving your CSV file with UTF-8 encoding for better compatibility.")
             except Exception as e:
@@ -181,6 +183,12 @@ def _show_upload_tab():
                 st.markdown("#### Preview")
                 st.dataframe(df.head(10), use_container_width=True)
                 st.caption(f"Showing first 10 rows of {len(df)} total rows")
+                profile = query_intelligence.build_dataset_profile(
+                    df,
+                    dataset_type=dataset_type,
+                    dataset_name=dataset_name or uploaded_file.name,
+                )
+                _display_profile_guidance(profile, key_prefix="upload_preview")
                 
                 # Upload if button was clicked
                 if upload_button:
@@ -217,6 +225,7 @@ def _show_upload_tab():
                             )
                             
                             st.success(f"Dataset uploaded successfully! Dataset ID: {dataset_id}")
+                            st.info(query_intelligence.recommended_next_action([profile]))
                             st.balloons()
                             
                         except Exception as e:
@@ -266,6 +275,14 @@ def _display_dataset_card(dataset):
             st.metric("Rows", dataset['row_count'])
         with col3:
             st.metric("Uploaded", dataset['upload_date'][:10])
+
+        try:
+            preview_df = csv_handler.get_preview(dataset['id'], n_rows=1000)
+            if not preview_df.empty:
+                profile = query_intelligence.build_profile_from_dataset_record(dataset, preview_df)
+                _display_profile_guidance(profile, key_prefix=f"managed_{dataset['id']}", compact=True)
+        except Exception as e:
+            st.caption(f"Dataset profile unavailable: {e}")
 
         # Analysis Capabilities
         caps = dataset.get('analysis_capabilities')
@@ -343,7 +360,7 @@ def _display_dataset_card(dataset):
         
         with col1:
             # Edit metadata button
-            if st.button(f"Edit Metadata", key=f"edit_{dataset['id']}"):
+            if st.button("Edit Metadata", key=f"edit_{dataset['id']}"):
                 st.session_state[f"editing_{dataset['id']}"] = True
         
         with col2:
@@ -372,7 +389,7 @@ def _display_dataset_card(dataset):
         
         with col4:
             # Delete button
-            if st.button(f"Delete", key=f"delete_{dataset['id']}", type="secondary"):
+            if st.button("Delete", key=f"delete_{dataset['id']}", type="secondary"):
                 st.session_state[f"confirm_delete_{dataset['id']}"] = True
         
         # Edit metadata form
@@ -382,6 +399,31 @@ def _display_dataset_card(dataset):
         # Delete confirmation
         if st.session_state.get(f"confirm_delete_{dataset['id']}", False):
             _show_delete_confirmation(dataset)
+
+
+def _display_profile_guidance(profile, key_prefix: str, compact: bool = False):
+    """Display dataset-aware brief, quality notes, and question starters."""
+    st.markdown("#### Dataset Brief")
+    st.markdown(query_intelligence.generate_dataset_brief(profile))
+
+    if profile.strengths:
+        cols = st.columns(min(3, len(profile.strengths)))
+        for idx, strength in enumerate(profile.strengths):
+            with cols[idx % len(cols)]:
+                st.success(strength)
+
+    if profile.warnings:
+        with st.expander("Data Quality Notes", expanded=not compact):
+            for warning in profile.warnings:
+                st.warning(warning)
+
+    suggestions = query_intelligence.suggest_questions(profile, limit=4 if compact else 6)
+    if suggestions:
+        st.markdown("#### Suggested Questions")
+        for idx, question in enumerate(suggestions):
+            if st.button(question, key=f"{key_prefix}_question_{idx}", use_container_width=True):
+                query_queue.queue_question(st.session_state, question)
+                st.success("Queued. Open Query Interface to review, edit, and run it.")
 
 
 def _show_edit_metadata_form(dataset):
@@ -438,7 +480,7 @@ def _show_delete_confirmation(dataset):
     st.warning(f"Warning: Are you sure you want to delete '{dataset['name']}'? This action cannot be undone.")
     col1, col2 = st.columns(2)
     with col1:
-        if st.button(f"Yes, Delete", key=f"confirm_yes_{dataset['id']}", type="primary"):
+        if st.button("Yes, Delete", key=f"confirm_yes_{dataset['id']}", type="primary"):
             if csv_handler.delete_dataset(dataset['id']):
                 st.success(f"Dataset '{dataset['name']}' deleted successfully!")
                 
@@ -453,6 +495,6 @@ def _show_delete_confirmation(dataset):
             else:
                 st.error("Failed to delete dataset.")
     with col2:
-        if st.button(f"Cancel", key=f"confirm_no_{dataset['id']}"):
+        if st.button("Cancel", key=f"confirm_no_{dataset['id']}"):
             st.session_state[f"confirm_delete_{dataset['id']}"] = False
             st.rerun()

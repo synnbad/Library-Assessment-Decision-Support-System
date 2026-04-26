@@ -106,10 +106,9 @@ Usage Example:
 Author: FERPA-Compliant RAG DSS Team
 """
 
-import sqlite3
 from typing import Dict, List, Optional, Any
 import statistics
-from modules.database import get_db_connection, execute_query
+from modules.database import execute_query
 from modules.pii_detector import redact_pii
 from config.settings import Settings
 
@@ -408,6 +407,7 @@ def create_report(
     include_qualitative: bool = False,
     include_quantitative: bool = False,
     quantitative_analysis_ids: Optional[List[int]] = None,
+    pinned_insights: Optional[List[Dict[str, Any]]] = None,
     db_path: Optional[str] = None
 ) -> Dict[str, Any]:
     """
@@ -469,6 +469,16 @@ def create_report(
     if not dataset_ids:
         raise ValueError("At least one dataset_id must be provided")
     
+    safe_pinned_insights = []
+    for insight in pinned_insights or []:
+        safe_answer, _ = redact_pii(str(insight.get('answer', '')))
+        safe_question, _ = redact_pii(str(insight.get('question', '')))
+        safe_pinned_insights.append({
+            **insight,
+            'question': safe_question,
+            'answer': safe_answer,
+        })
+
     # Initialize report structure
     report = {
         'title': '',
@@ -483,6 +493,7 @@ def create_report(
         'visualizations': [],
         'qualitative_analysis': None,
         'quantitative_analyses': [],
+        'pinned_insights': safe_pinned_insights,
         'theme_summaries': [],
         'citations': [],
         'timestamp': datetime.now().isoformat()
@@ -677,6 +688,11 @@ def create_report(
     # Add visualization warnings to report metadata
     if visualization_warnings:
         report['metadata']['visualization_warnings'] = visualization_warnings
+
+    if report['pinned_insights']:
+        report['citations'].append(
+            f"Pinned Query Insights: {len(report['pinned_insights'])} item(s) selected by user"
+        )
     
     # Generate executive summary using LLM
     try:
@@ -758,8 +774,6 @@ def _export_markdown(report: Dict[str, Any]) -> bytes:
     Returns:
         Markdown content as bytes
     """
-    from datetime import datetime
-    
     lines = []
     
     # Title
@@ -939,6 +953,16 @@ def _export_markdown(report: Dict[str, Any]) -> bytes:
                 lines.append("#### Recommendations\n")
                 lines.append(analysis['recommendations'])
                 lines.append("")
+
+    # Pinned Query Insights
+    if report.get('pinned_insights'):
+        lines.append("## Pinned Query Insights\n")
+        for idx, insight in enumerate(report['pinned_insights'], 1):
+            lines.append(f"### Insight {idx}\n")
+            lines.append(f"**Question:** {insight.get('question', '')}")
+            lines.append("")
+            lines.append(str(insight.get('answer', '')))
+            lines.append("")
     
     # Citations
     if report.get('citations'):
@@ -1068,6 +1092,15 @@ def _export_pdf(report: Dict[str, Any]) -> bytes:
                     for quote in theme['quotes']:
                         story.append(Paragraph(f"• {quote}", styles['Normal']))
                 
+                story.append(Spacer(1, 0.2*inch))
+
+        if report.get('pinned_insights'):
+            story.append(PageBreak())
+            story.append(Paragraph("Pinned Query Insights", styles['Heading2']))
+            for idx, insight in enumerate(report['pinned_insights'], 1):
+                story.append(Paragraph(f"Insight {idx}", styles['Heading3']))
+                story.append(Paragraph(f"<b>Question:</b> {insight.get('question', '')}", styles['Normal']))
+                story.append(Paragraph(str(insight.get('answer', '')), styles['Normal']))
                 story.append(Spacer(1, 0.2*inch))
         
         # Citations

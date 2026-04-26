@@ -3,11 +3,9 @@ Integration tests for data upload functionality.
 Tests the CSV handler functions used by the data upload page.
 """
 
-import pytest
 import pandas as pd
 from io import StringIO
 from modules import csv_handler
-from modules.database import execute_query, execute_update
 
 
 def test_csv_validation_survey():

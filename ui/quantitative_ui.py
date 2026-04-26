@@ -9,6 +9,7 @@ import streamlit as st
 import pandas as pd
 import time
 from modules import csv_handler, quantitative_analysis, auth
+from ui import smart_guidance
 
 
 def show_quantitative_analysis_page():
@@ -60,6 +61,30 @@ def show_quantitative_analysis_page():
         st.metric("Total Rows", selected_dataset['row_count'])
     with col3:
         st.metric("Type", selected_dataset['dataset_type'])
+
+    selected_profile = None
+    try:
+        selected_profile = smart_guidance.build_profile(selected_dataset)
+    except Exception as e:
+        st.caption(f"Smart guidance unavailable for this dataset: {e}")
+
+    if selected_profile:
+        st.markdown("### Suggested Quantitative Paths")
+        smart_guidance.display_profile_summary(selected_profile)
+        recommended = _recommended_analysis_order(selected_profile)
+        st.info(f"Recommended first analysis: {recommended[0]}")
+        smart_guidance.display_question_buttons(
+            smart_guidance.quantitative_next_questions(selected_dataset["name"], selected_profile),
+            key_prefix=f"quant_suggested_{selected_dataset_id}",
+            limit=4,
+        )
+    else:
+        recommended = [
+            "Correlation Analysis",
+            "Trend Analysis",
+            "Comparative Analysis",
+            "Distribution Analysis",
+        ]
     
     st.markdown("---")
     
@@ -67,12 +92,7 @@ def show_quantitative_analysis_page():
     st.markdown("### Select Analysis Type")
     analysis_type = st.selectbox(
         "Choose the type of analysis to perform",
-        options=[
-            "Correlation Analysis",
-            "Trend Analysis",
-            "Comparative Analysis",
-            "Distribution Analysis"
-        ],
+        options=recommended,
         key="analysis_type_selector"
     )
     
@@ -90,7 +110,7 @@ def show_quantitative_analysis_page():
     
     # Display results if available
     if 'quant_results' in st.session_state:
-        _display_analysis_results(st.session_state.quant_results)
+        _display_analysis_results(st.session_state.quant_results, selected_profile)
 
 
 def _run_correlation_analysis(dataset_id, dataset):
@@ -134,7 +154,8 @@ def _run_correlation_analysis(dataset_id, dataset):
                 execution_time = time.time() - start_time
                 st.session_state.quant_results = {
                     'analysis_id': analysis_id, 'analysis_type': 'correlation',
-                    'results': results, 'execution_time': execution_time
+                    'results': results, 'execution_time': execution_time,
+                    'dataset_name': dataset['name'],
                 }
                 
                 auth.log_access(st.session_state.username,
@@ -196,7 +217,8 @@ def _run_trend_analysis(dataset_id, dataset):
                     execution_time = time.time() - start_time
                     st.session_state.quant_results = {
                         'analysis_id': analysis_id, 'analysis_type': 'trend',
-                        'results': results, 'execution_time': execution_time
+                        'results': results, 'execution_time': execution_time,
+                        'dataset_name': dataset['name'],
                     }
                     
                     auth.log_access(st.session_state.username,
@@ -267,7 +289,8 @@ def _run_comparative_analysis(dataset_id, dataset):
                     execution_time = time.time() - start_time
                     st.session_state.quant_results = {
                         'analysis_id': analysis_id, 'analysis_type': 'comparative',
-                        'results': results, 'execution_time': execution_time
+                        'results': results, 'execution_time': execution_time,
+                        'dataset_name': dataset['name'],
                     }
                     
                     auth.log_access(st.session_state.username,
@@ -331,7 +354,8 @@ def _run_distribution_analysis(dataset_id, dataset):
                     execution_time = time.time() - start_time
                     st.session_state.quant_results = {
                         'analysis_id': analysis_id, 'analysis_type': 'distribution',
-                        'results': results, 'execution_time': execution_time
+                        'results': results, 'execution_time': execution_time,
+                        'dataset_name': dataset['name'],
                     }
                     
                     auth.log_access(st.session_state.username,
@@ -347,7 +371,7 @@ def _run_distribution_analysis(dataset_id, dataset):
         st.error(f"Could not load dataset columns: {str(e)}")
 
 
-def _display_analysis_results(results_data):
+def _display_analysis_results(results_data, profile=None):
     """Display quantitative analysis results."""
     results = results_data['results']
     analysis_type_key = results_data['analysis_type']
@@ -446,6 +470,14 @@ def _display_analysis_results(results_data):
     if results.get('recommendations'):
         st.markdown("### Recommendations")
         st.markdown(results['recommendations'])
+
+    st.markdown("### Continue in Query")
+    dataset_name = results_data.get("dataset_name", "this dataset")
+    smart_guidance.display_question_buttons(
+        smart_guidance.quantitative_next_questions(dataset_name, profile),
+        key_prefix=f"quant_results_{results_data['analysis_id']}",
+        limit=4,
+    )
     
     # Export section
     st.markdown("---")
@@ -480,3 +512,33 @@ def _display_analysis_results(results_data):
                 file_name=f"quantitative_analysis_{results_data['analysis_id']}.json",
                 mime="application/json"
             )
+
+
+def _recommended_analysis_order(profile):
+    """Order analysis choices by what the selected dataset appears to support."""
+    ordered = []
+    if profile.date_columns and profile.numeric_columns:
+        ordered.append("Trend Analysis")
+    if profile.numeric_columns and profile.category_columns:
+        ordered.append("Comparative Analysis")
+    if profile.numeric_columns:
+        ordered.extend(["Distribution Analysis", "Correlation Analysis"])
+    ordered.extend(
+        [
+            "Correlation Analysis",
+            "Trend Analysis",
+            "Comparative Analysis",
+            "Distribution Analysis",
+        ]
+    )
+    return _dedupe(ordered)
+
+
+def _dedupe(items):
+    seen = set()
+    result = []
+    for item in items:
+        if item not in seen:
+            result.append(item)
+            seen.add(item)
+    return result

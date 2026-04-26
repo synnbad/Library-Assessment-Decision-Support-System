@@ -108,12 +108,10 @@ except ImportError:
 os.environ.setdefault("LOKY_MAX_CPU_COUNT", str(max(1, min(os.cpu_count() or 1, 8))))
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
-from datetime import datetime
 from typing import List, Dict, Any, Optional
-from collections import Counter
 from modules.database import execute_query, execute_update
 from modules.csv_handler import update_data_provenance
-from modules.pii_detector import redact_pii, redact_pii_from_list
+from modules.pii_detector import redact_pii
 from config.settings import Settings
 from modules.logging_service import get_logger, log_operation
 
@@ -121,8 +119,6 @@ logger = get_logger(__name__)
 
 # Try to import enhanced sentiment analyzer
 try:
-    from modules.sentiment_enhanced import analyze_sentiment as analyze_sentiment_enhanced
-    from modules.sentiment_enhanced import analyze_dataset_sentiment as analyze_dataset_sentiment_enhanced
     ENHANCED_SENTIMENT_AVAILABLE = Settings.ENABLE_ENHANCED_SENTIMENT
     if ENHANCED_SENTIMENT_AVAILABLE:
         print("Enhanced sentiment analysis (RoBERTa) enabled")
@@ -432,8 +428,8 @@ def extract_themes(
     # Check if we got any valid themes
     if not themes:
         raise ValueError(
-            f"Could not extract any themes from the data. "
-            f"This may occur with very short or homogeneous responses."
+            "Could not extract any themes from the data. "
+            "This may occur with very short or homogeneous responses."
         )
     
     # Display warnings if any themes had issues
@@ -567,7 +563,7 @@ def generate_summary(analysis_id: int) -> str:
     sentiment = json.loads(analysis['overall_sentiment'])
     
     # Build summary
-    summary = f"Qualitative Analysis Summary\n"
+    summary = "Qualitative Analysis Summary\n"
     summary += f"{'=' * 50}\n\n"
     summary += f"Total Responses Analyzed: {analysis['response_count']}\n\n"
     
@@ -580,7 +576,7 @@ def generate_summary(analysis_id: int) -> str:
     for theme in themes:
         summary += f"\n{theme['theme_name']} ({theme['percentage']:.1f}% of responses)\n"
         summary += f"  Keywords: {', '.join(theme['keywords'][:3])}\n"
-        summary += f"  Sentiment: "
+        summary += "  Sentiment: "
         summary += f"Positive {theme['sentiment_distribution']['positive']:.1%}, "
         summary += f"Neutral {theme['sentiment_distribution']['neutral']:.1%}, "
         summary += f"Negative {theme['sentiment_distribution']['negative']:.1%}\n"

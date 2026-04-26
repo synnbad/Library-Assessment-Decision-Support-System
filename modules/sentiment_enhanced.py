@@ -9,7 +9,6 @@ traditional lexicon-based approaches.
 
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
-from functools import lru_cache
 import logging
 
 # Configure logging

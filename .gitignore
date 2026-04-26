@@ -55,6 +55,7 @@ data/library.db
 data/chroma_db/
 data/raw/*.csv
 data/raw/*.json
+data/raw/public_test_datasets/
 data/processed/
 *.db
 *.db-journal
@@ -96,6 +97,8 @@ test_*.py
 test_encoding_handling.py
 test_flexible_validation.py
 test_metadata_autofill.py
+!tests/
+!tests/**/*.py
 
 # Documentation drafts (keep only final versions)
 *_PART*.md

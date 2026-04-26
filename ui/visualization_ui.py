@@ -8,6 +8,7 @@ including bar charts, line charts, and pie charts.
 import streamlit as st
 import pandas as pd
 from modules import csv_handler, visualization, auth
+from ui import smart_guidance
 
 
 def show_visualizations_page():
@@ -23,14 +24,15 @@ def show_visualizations_page():
     # Smart dataset selector
     def _viz_label(d):
         caps = d.get('analysis_capabilities', {})
-        analyses = caps.get('analyses', {}) if caps else {}
         stats = caps.get('stats', {}) if caps else {}
         n_num = len(stats.get('usable_numeric_cols', []))
         has_date = len(stats.get('date_cols', [])) > 0
         hints = []
         if d['dataset_type'] in ('usage', 'circulation'):
-            if has_date: hints.append('trend')
-            if n_num >= 1: hints.append('bar/pie')
+            if has_date:
+                hints.append('trend')
+            if n_num >= 1:
+                hints.append('bar/pie')
         elif d['dataset_type'] == 'survey':
             hints.append('sentiment chart')
         tag = ', '.join(hints) if hints else d['dataset_type']
@@ -54,6 +56,23 @@ def show_visualizations_page():
         st.metric("Type", selected_dataset['dataset_type'].title())
     with col3:
         st.metric("Rows", selected_dataset['row_count'])
+
+    selected_profile = None
+    try:
+        selected_profile = smart_guidance.build_profile(selected_dataset)
+    except Exception as e:
+        st.caption(f"Smart guidance unavailable for this dataset: {e}")
+
+    if selected_profile:
+        st.markdown("### Chart Guidance")
+        smart_guidance.display_profile_summary(selected_profile)
+        chart_ideas = _chart_questions(selected_dataset["name"], selected_profile)
+        if chart_ideas:
+            smart_guidance.display_question_buttons(
+                chart_ideas,
+                key_prefix=f"viz_question_{selected_dataset_id}",
+                limit=4,
+            )
 
     st.markdown("---")
 
@@ -191,6 +210,16 @@ def show_visualizations_page():
             st.markdown("---")
             st.markdown("### Generated Chart")
             st.plotly_chart(st.session_state.current_chart['figure'], use_container_width=True)
+            st.markdown("### Continue in Query")
+            smart_guidance.display_question_buttons(
+                [
+                    f"Explain the chart titled {st.session_state.current_chart['title']} in plain English.",
+                    f"What caveats should I mention with {st.session_state.current_chart['title']}?",
+                    f"Turn {st.session_state.current_chart['title']} into a report finding.",
+                ],
+                key_prefix="viz_generated_chart",
+                limit=3,
+            )
 
             st.markdown("### Export Chart")
             col1, col2 = st.columns(2)
@@ -253,3 +282,17 @@ def show_visualizations_page():
     
     st.markdown("---")
     st.caption("Tip: Use custom axis labels to make your charts more professional and easier to understand.")
+
+
+def _chart_questions(dataset_name: str, profile):
+    """Suggest chart-oriented questions for the selected dataset."""
+    questions = []
+    if profile.is_time_ready and profile.is_numeric_ready:
+        questions.append(f"What trend chart should I make for {dataset_name}?")
+    if profile.is_numeric_ready and profile.category_columns:
+        questions.append(f"What categories should I compare visually in {dataset_name}?")
+    if profile.is_text_ready:
+        questions.append(f"What distribution chart would summarize {dataset_name}?")
+    if profile.warnings:
+        questions.append(f"What chart limitations should I note for {dataset_name}?")
+    return questions

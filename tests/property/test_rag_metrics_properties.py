@@ -23,9 +23,7 @@ Edge Cases Tested:
 - Partial overlaps
 """
 
-import pytest
 from hypothesis import given, settings, strategies as st, assume
-from typing import Set
 from modules.rag_evaluation import RAGEvaluator
 
 

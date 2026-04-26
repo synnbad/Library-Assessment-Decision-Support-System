@@ -6,7 +6,6 @@ Tests Requirements 1.2 and 1.5:
 - Display specific error messages for formatting errors
 """
 
-import pytest
 import pandas as pd
 from io import StringIO, BytesIO
 from modules import csv_handler

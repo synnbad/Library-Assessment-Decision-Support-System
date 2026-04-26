@@ -90,8 +90,6 @@ Author: FERPA-Compliant RAG DSS Team
 import bcrypt
 import time
 import secrets
-import hashlib
-from datetime import datetime
 from typing import Optional, Dict, Any
 from collections import defaultdict
 from threading import Lock

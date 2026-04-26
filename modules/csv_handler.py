@@ -51,9 +51,7 @@ import hashlib
 import json
 from datetime import datetime
 from typing import Optional, Dict, Any, List, Tuple
-from pathlib import Path
 from modules.database import execute_query, execute_update, get_db_connection
-from config.settings import Settings
 from modules.logging_service import get_logger, log_operation
 
 logger = get_logger(__name__)
@@ -324,8 +322,8 @@ def validate_csv(file, dataset_type: str, strict_mode: bool = True) -> Tuple[boo
         return False, f"Invalid CSV format. Please upload a valid CSV file. Details: {str(e)}"
     except UnicodeDecodeError:
         return False, "Unable to read file due to encoding issues. Please save your CSV with UTF-8 encoding and try again."
-    except Exception as e:
-        return False, f"Invalid CSV format. Please upload a valid CSV file."
+    except Exception:
+        return False, "Invalid CSV format. Please upload a valid CSV file."
 
 
 def parse_csv(file, encoding=None) -> pd.DataFrame:
@@ -415,7 +413,7 @@ def auto_detect_metadata(df: pd.DataFrame, dataset_type: str, filename: str) -> 
                     max_date = dates.max().strftime('%Y-%m-%d')
                     description_parts.append(f"Date range: {min_date} to {max_date}.")
                     break
-            except:
+            except (TypeError, ValueError, OverflowError):
                 continue
     
     metadata['description'] = " ".join(description_parts)
@@ -1063,8 +1061,6 @@ def classify_dataset_for_analysis(dataset: Dict[str, Any]) -> Dict[str, Any]:
         - recommended: 'qualitative' | 'quantitative' | 'both' | 'neither'
     """
     dtype = dataset.get('dataset_type', '')
-    row_count = dataset.get('row_count', 0)
-
     if dtype == 'survey':
         return {
             'qualitative': True,
@@ -1184,7 +1180,7 @@ def add_query_to_provenance(dataset_id: int, question: str, username: str) -> No
 # CSV Round-Trip Validation Functions
 # ============================================================================
 
-def serialize_to_csv(df: pd.DataFrame) -> str:
+def _legacy_serialize_to_csv(df: pd.DataFrame) -> str:
     """
     Serialize DataFrame to CSV string.
     
@@ -1197,7 +1193,7 @@ def serialize_to_csv(df: pd.DataFrame) -> str:
     return df.to_csv(index=False)
 
 
-def parse_from_csv(csv_string: str) -> pd.DataFrame:
+def _legacy_parse_from_csv(csv_string: str) -> pd.DataFrame:
     """
     Parse CSV string to DataFrame.
     
@@ -1216,7 +1212,7 @@ def parse_from_csv(csv_string: str) -> pd.DataFrame:
     )
 
 
-def dataframes_equivalent(df1: pd.DataFrame, df2: pd.DataFrame, 
+def _legacy_dataframes_equivalent(df1: pd.DataFrame, df2: pd.DataFrame, 
                           float_tolerance: float = 1e-9) -> bool:
     """
     Check if two DataFrames are equivalent for round-trip purposes.
@@ -1279,7 +1275,7 @@ def dataframes_equivalent(df1: pd.DataFrame, df2: pd.DataFrame,
     return True
 
 
-def validate_round_trip(df: pd.DataFrame, dataset_type: str) -> tuple:
+def _legacy_validate_round_trip(df: pd.DataFrame, dataset_type: str) -> tuple:
     """
     Validate that DataFrame can round-trip through CSV serialization.
     
@@ -1314,7 +1310,7 @@ def validate_round_trip(df: pd.DataFrame, dataset_type: str) -> tuple:
         return False, f"Round-trip validation error: {str(e)}"
 
 
-def validate_csv_dataframe(df: pd.DataFrame, dataset_type: str) -> tuple:
+def _legacy_validate_csv_dataframe(df: pd.DataFrame, dataset_type: str) -> tuple:
     """
     Validate DataFrame structure for a given dataset type.
     
@@ -1465,7 +1461,7 @@ def dataframes_equivalent(df1: pd.DataFrame, df2: pd.DataFrame, tolerance: float
                 if len(col1_numeric[non_nan_mask]) > 0:
                     if not pd.Series(col1_numeric[non_nan_mask]).sub(col2_float[non_nan_mask]).abs().le(tolerance).all():
                         return False
-            except:
+            except (TypeError, ValueError):
                 # If conversion fails, columns are not equivalent
                 return False
         
@@ -1488,7 +1484,7 @@ def dataframes_equivalent(df1: pd.DataFrame, df2: pd.DataFrame, tolerance: float
                 if len(col1_float[non_nan_mask]) > 0:
                     if not pd.Series(col1_float[non_nan_mask]).sub(col2_numeric[non_nan_mask]).abs().le(tolerance).all():
                         return False
-            except:
+            except (TypeError, ValueError):
                 # If conversion fails, columns are not equivalent
                 return False
         

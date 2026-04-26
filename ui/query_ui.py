@@ -11,7 +11,8 @@ from modules.rag_query import (
     RAGQuery,
     get_rag_dependency_status,
 )
-from modules import auth, csv_handler
+from modules import auth, csv_handler, query_queue, workflow_insights
+from modules import query_intelligence
 
 
 def show_query_interface_page():
@@ -97,6 +98,8 @@ def show_query_interface_page():
     else:
         st.success(f"{len(indexed_datasets)} indexed dataset(s) are ready for querying.")
 
+    dataset_profiles = _build_dataset_profiles(indexed_datasets or datasets)
+
     # Test Ollama connection
     is_connected, error_msg = rag_engine.test_ollama_connection()
     
@@ -117,6 +120,8 @@ def show_query_interface_page():
 
     has_indexed_data = len(indexed_datasets) > 0
     query_enabled = is_connected and has_indexed_data
+    profile_query_enabled = bool(dataset_profiles)
+    chat_enabled = query_enabled or profile_query_enabled
     
     # Get conversation history
     conversation_history = rag_engine.get_conversation_history(st.session_state.query_session_id)
@@ -144,6 +149,19 @@ def show_query_interface_page():
             st.rerun()
     with col3:
         st.metric("Model", rag_engine.model_name)
+
+    if dataset_profiles:
+        st.markdown("---")
+        st.markdown("### Smart Starters")
+        st.caption(query_intelligence.recommended_next_action(dataset_profiles, has_indexed_data=has_indexed_data))
+        starter_questions = _starter_questions(dataset_profiles)
+        if starter_questions:
+            starter_cols = st.columns(2)
+            for idx, question in enumerate(starter_questions):
+                with starter_cols[idx % 2]:
+                    if st.button(question, key=f"starter_question_{idx}", use_container_width=True):
+                        query_queue.queue_question(st.session_state, question)
+                        st.rerun()
     
     st.markdown("---")
     
@@ -163,10 +181,30 @@ def show_query_interface_page():
                     st.error("Ollama Model Missing")
                 elif error_type == "ollama_connection_failed":
                     st.error("Ollama Connection Failed")
+                elif error_type == "query_not_ready":
+                    st.warning("Query Search Not Ready")
                 elif error_type == "exception":
                     st.error("Error")
             
             st.markdown(message["content"])
+
+            if message["role"] == "assistant" and message.get("query_intent"):
+                st.caption(f"Intent: {message['query_intent'].replace('_', ' ').title()}")
+                if message.get("evidence"):
+                    evidence = message["evidence"]
+                    st.caption(f"Evidence: {evidence['label']} - {evidence['reason']}")
+                if message.get("rewritten_query"):
+                    with st.expander("Query Rewrite", expanded=False):
+                        st.markdown(message["rewritten_query"])
+                if st.button("Pin for Report", key=f"pin_message_{msg_idx}"):
+                    previous_question = _previous_user_question(st.session_state.messages, msg_idx)
+                    workflow_insights.pin_insight(
+                        st.session_state,
+                        previous_question,
+                        message["content"],
+                        username=st.session_state.username,
+                    )
+                    st.success("Pinned for Report Generation.")
             
             # Display citations if present
             if message["role"] == "assistant" and "citations" in message:
@@ -181,20 +219,23 @@ def show_query_interface_page():
                     with st.expander("Suggested Follow-up Questions", expanded=False):
                         for i, suggestion in enumerate(message["suggested_questions"]):
                             if st.button(suggestion, key=f"suggestion_{msg_idx}_{i}"):
-                                # Add suggestion as user message and process it
-                                st.session_state.messages.append({"role": "user", "content": suggestion})
+                                query_queue.queue_question(st.session_state, suggestion)
                                 st.rerun()
     
     if not has_indexed_data:
-        st.info("Index at least one dataset on this page before asking questions.")
+        st.info("Index at least one dataset on this page before asking questions that need source-row search.")
     if has_indexed_data and not is_connected:
         st.info("Querying is paused until Ollama is available.")
 
+    _display_pending_question(chat_enabled, query_enabled)
+
     # Chat input
-    prompt = st.chat_input(
+    chat_prompt = st.chat_input(
         "Ask a question about your library data...",
-        disabled=not query_enabled
+        disabled=not chat_enabled
     )
+    pending_prompt = query_queue.consume_runnable_question(st.session_state) if chat_enabled else None
+    prompt = pending_prompt or chat_prompt
     if prompt:
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -207,12 +248,61 @@ def show_query_interface_page():
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 try:
-                    # Query RAG engine
-                    result = rag_engine.query(
-                        question=prompt,
-                        session_id=st.session_state.query_session_id,
-                        username=st.session_state.username
+                    query_plan = query_intelligence.classify_query(prompt, dataset_profiles)
+                    rewritten_prompt = query_intelligence.rewrite_query(
+                        prompt,
+                        dataset_profiles,
+                        query_plan["intent"],
                     )
+                    st.caption(f"Intent: {query_plan['intent'].replace('_', ' ').title()}")
+                    if rewritten_prompt != prompt:
+                        with st.expander("Query Rewrite", expanded=False):
+                            st.markdown(rewritten_prompt)
+
+                    profile_answer = query_intelligence.answer_from_profiles(
+                        prompt,
+                        dataset_profiles,
+                        query_plan["intent"],
+                    )
+                    if profile_answer is not None:
+                        result = {
+                            "answer": profile_answer,
+                            "confidence": 1.0 if dataset_profiles else 0.0,
+                            "citations": [],
+                            "suggested_questions": [],
+                            "processing_time_ms": 0,
+                            "error_type": None,
+                        }
+                        workflow_insights.log_query_activity(
+                            question=prompt,
+                            answer=profile_answer,
+                            confidence=result["confidence"],
+                            session_id=st.session_state.query_session_id,
+                            processing_time_ms=0,
+                        )
+                    elif not query_enabled:
+                        result = {
+                            "answer": (
+                                "This question needs indexed source rows and a live Ollama connection. "
+                                "I can still answer data inventory and data quality questions from the "
+                                "uploaded dataset profiles."
+                            ),
+                            "confidence": 0.0,
+                            "citations": [],
+                            "suggested_questions": [
+                                "What data do I have available?",
+                                "What data quality issues should I know about?",
+                            ],
+                            "processing_time_ms": 0,
+                            "error_type": "query_not_ready",
+                        }
+                    else:
+                        # Query RAG engine
+                        result = rag_engine.query(
+                            question=rewritten_prompt,
+                            session_id=st.session_state.query_session_id,
+                            username=st.session_state.username
+                        )
                     
                     # Check for error types
                     error_type = result.get("error_type")
@@ -232,6 +322,9 @@ def show_query_interface_page():
                     elif error_type == "ollama_connection_failed":
                         st.error("Ollama Connection Failed")
                         st.markdown(result["answer"])
+                    elif error_type == "query_not_ready":
+                        st.warning("Query Search Not Ready")
+                        st.markdown(result["answer"])
                     else:
                         # Normal response
                         st.markdown(result["answer"])
@@ -242,29 +335,56 @@ def show_query_interface_page():
                             for citation in result["citations"]:
                                 st.markdown(f"- **Source {citation['source_number']}**: Dataset ID {citation['dataset_id']} ({citation['dataset_type']}) - {citation.get('date', 'N/A')}")
                     
+                    smart_suggestions = query_intelligence.suggest_followups(
+                        prompt,
+                        result.get("answer", ""),
+                        dataset_profiles,
+                        query_plan["intent"],
+                    )
+                    result["suggested_questions"] = _dedupe(
+                        smart_suggestions + result.get("suggested_questions", [])
+                    )[:5]
+
                     # Display suggested questions
                     if result["suggested_questions"]:
                         with st.expander("Suggested Follow-up Questions", expanded=False):
                             for i, suggestion in enumerate(result["suggested_questions"]):
                                 if st.button(suggestion, key=f"suggestion_live_{len(st.session_state.messages)}_{i}"):
-                                    # Add suggestion as user message
-                                    st.session_state.messages.append({"role": "user", "content": suggestion})
+                                    query_queue.queue_question(st.session_state, suggestion)
                                     st.rerun()
+
+                    evidence = query_intelligence.assess_evidence(
+                        result.get("confidence", 0.0),
+                        len(result.get("citations", [])),
+                        query_plan["intent"],
+                        prompt,
+                        dataset_profiles,
+                    )
                     
                     # Display processing time (only for successful queries)
                     if not error_type:
-                        st.caption(f"Processing time: {result['processing_time_ms']}ms | Confidence: {result['confidence']:.2%}")
+                        st.caption(
+                            f"Processing time: {result['processing_time_ms']}ms | "
+                            f"Evidence: {evidence['label']} ({evidence['score']:.0%})"
+                        )
+                        st.caption(evidence["reason"])
+                    elif error_type == "query_not_ready":
+                        st.caption(f"Evidence: {evidence['label']} - {evidence['reason']}")
                     else:
                         st.caption(f"Processing time: {result['processing_time_ms']}ms")
                     
                     # Add assistant message to chat history
-                    st.session_state.messages.append({
+                    assistant_message = {
                         "role": "assistant",
                         "content": result["answer"],
                         "citations": result["citations"],
                         "suggested_questions": result["suggested_questions"],
-                        "error_type": error_type
-                    })
+                        "error_type": error_type,
+                        "query_intent": query_plan["intent"],
+                        "rewritten_query": rewritten_prompt,
+                        "evidence": evidence,
+                    }
+                    st.session_state.messages.append(assistant_message)
                     
                     # Log access
                     auth.log_access(
@@ -348,3 +468,80 @@ def show_query_interface_page():
     
     st.markdown("---")
     st.caption("Tip: Be specific in your questions for better results. The system searches across all uploaded datasets.")
+
+
+def _build_dataset_profiles(datasets):
+    """Build query guidance profiles from stored dataset previews."""
+    profiles = []
+    for dataset in datasets:
+        try:
+            preview_df = csv_handler.get_preview(dataset["id"], n_rows=1000)
+            if preview_df.empty:
+                continue
+            profiles.append(query_intelligence.build_profile_from_dataset_record(dataset, preview_df))
+        except Exception:
+            continue
+    return profiles
+
+
+def _starter_questions(profiles):
+    """Collect a short, de-duplicated set of starter questions."""
+    questions = []
+    for profile in profiles[:3]:
+        questions.extend(query_intelligence.suggest_questions(profile, limit=3))
+    return _dedupe(questions)[:6]
+
+
+def _display_pending_question(chat_enabled: bool, query_enabled: bool):
+    """Show an editable queued question before it is submitted."""
+    pending_question = st.session_state.get(query_queue.PENDING_QUERY_KEY)
+    if not pending_question:
+        return
+
+    st.markdown("---")
+    st.markdown("### Pending Question")
+    st.caption("Suggested questions wait here so you can adjust them before the app searches your data.")
+    edited_question = st.text_area(
+        "Review or edit before running",
+        value=pending_question,
+        key="pending_query_editor",
+        disabled=not chat_enabled,
+    )
+    col1, col2, col3 = st.columns([1, 1, 2])
+    with col1:
+        if st.button("Run", type="primary", disabled=not chat_enabled, use_container_width=True):
+            query_queue.update_pending_question(st.session_state, edited_question.strip())
+            if query_queue.mark_pending_for_run(st.session_state):
+                st.rerun()
+    with col2:
+        if st.button("Clear", use_container_width=True):
+            query_queue.clear_pending_question(st.session_state)
+            if "pending_query_editor" in st.session_state:
+                del st.session_state["pending_query_editor"]
+            st.rerun()
+    with col3:
+        if not chat_enabled:
+            st.caption("Upload data before running this question.")
+        elif not query_enabled:
+            st.caption("Inventory and quality questions can run now. Source-row search still needs indexing and Ollama.")
+        else:
+            st.caption("Run will submit this question and keep the rewrite visible with the answer.")
+
+
+def _previous_user_question(messages, assistant_index: int) -> str:
+    """Find the nearest user prompt before an assistant message."""
+    for message in reversed(messages[:assistant_index]):
+        if message.get("role") == "user":
+            return message.get("content", "")
+    return ""
+
+
+def _dedupe(items):
+    """Return unique strings while preserving order."""
+    seen = set()
+    result = []
+    for item in items:
+        if item and item not in seen:
+            result.append(item)
+            seen.add(item)
+    return result

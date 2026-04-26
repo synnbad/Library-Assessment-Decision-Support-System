@@ -122,8 +122,13 @@ Author: FERPA-Compliant RAG DSS Team
 import pandas as pd
 import numpy as np
 import json
-from datetime import datetime
-from typing import Dict, Any, Optional, List, Tuple
+import ollama
+from typing import Dict, Any, Optional, List
+
+from config.settings import Settings
+from modules.database import execute_query, execute_update
+from modules.pii_detector import redact_pii
+from modules.logging_service import get_logger, log_operation
 
 
 class _NumpyEncoder(json.JSONEncoder):
@@ -145,11 +150,6 @@ class _NumpyEncoder(json.JSONEncoder):
 def _safe_json_dumps(obj: Any) -> str:
     """Serialize obj to JSON, converting numpy types automatically."""
     return json.dumps(obj, cls=_NumpyEncoder)
-import ollama
-from config.settings import Settings
-from modules.database import execute_query, execute_update
-from modules.pii_detector import redact_pii
-from modules.logging_service import get_logger, log_operation
 
 logger = get_logger(__name__)
 
@@ -237,10 +237,6 @@ def calculate_correlation(
     
     if not dataset_rows:
         raise ValueError(f"Dataset with ID {dataset_id} not found")
-    
-    # Get dataset data (assuming it's stored as JSON or we need to load from file)
-    # For now, we'll assume the data is accessible via the dataset record
-    dataset_record = dataset_rows[0]
     
     # Load the actual data - this depends on how datasets are stored
     # We'll need to get the data from the appropriate source
@@ -405,7 +401,6 @@ def calculate_trend(
         
     Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6
     """
-    from scipy import stats
     import statsmodels.api as sm
     from statsmodels.tsa.stattools import acf
     
@@ -1362,7 +1357,6 @@ def _generate_trend_prompt(
     seasonal = results.get('seasonal_pattern', False)
     forecast = results.get('forecast', [])
     value_col = results.get('value_column', 'value')
-    date_col = results.get('date_column', 'date')
     start_date = results.get('start_date', 'unknown')
     end_date = results.get('end_date', 'unknown')
     
@@ -2364,7 +2358,6 @@ def _generate_trend_recommendations_prompt(
     Requirements: 3.2, 3.3, 3.6
     """
     trend_dir = results.get('trend_direction', 'stable')
-    slope = results.get('trend_slope', 0)
     r_squared = results.get('r_squared', 0)
     seasonal = results.get('seasonal_pattern', False)
     forecast = results.get('forecast', [])
@@ -3000,7 +2993,7 @@ def list_analyses_by_dataset(
 def create_correlation_heatmap(
     correlation_results: Dict[str, Any],
     title: str = "Correlation Heatmap"
-) -> 'go.Figure':
+) -> Any:
     """
     Create a correlation heatmap visualization.
     
@@ -3085,7 +3078,7 @@ def create_correlation_heatmap(
 def create_trend_chart(
     trend_results: Dict[str, Any],
     title: str = "Trend Analysis"
-) -> 'go.Figure':
+) -> Any:
     """
     Create a trend chart with trend line and forecast.
     
@@ -3177,7 +3170,7 @@ def create_trend_chart(
 def create_comparison_boxplot(
     comparative_results: Dict[str, Any],
     title: str = "Group Comparison"
-) -> 'go.Figure':
+) -> Any:
     """
     Create box plots for comparing groups.
     
@@ -3271,7 +3264,7 @@ def create_comparison_boxplot(
 def create_distribution_histogram(
     distribution_results: Dict[str, Any],
     title: str = "Distribution Analysis"
-) -> 'go.Figure':
+) -> Any:
     """
     Create a histogram with outliers highlighted.
     
