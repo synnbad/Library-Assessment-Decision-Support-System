@@ -12,6 +12,7 @@ from urllib.request import urlopen
 import streamlit as st
 
 from config.settings import Settings
+from modules import csv_handler, query_intelligence, query_queue
 from modules.database import execute_query
 
 
@@ -85,6 +86,9 @@ def show_home_page():
     with stats_col3:
         st.metric("Users", quick_stats["users"])
 
+    st.markdown("---")
+    _display_guided_next_steps()
+
 
 def display_system_status():
     """Check local component status for the dashboard."""
@@ -137,3 +141,56 @@ def display_quick_stats():
         pass
 
     return stats
+
+
+def _display_guided_next_steps():
+    """Show dataset-aware next steps on the dashboard."""
+    st.markdown("### Recommended Next Step")
+    datasets = csv_handler.get_datasets()
+    profiles = []
+    for dataset in datasets[:5]:
+        try:
+            preview_df = csv_handler.get_preview(dataset["id"], n_rows=1000)
+            if not preview_df.empty:
+                profiles.append(query_intelligence.build_profile_from_dataset_record(dataset, preview_df))
+        except Exception:
+            continue
+
+    st.info(query_intelligence.recommended_next_action(profiles))
+    if not profiles:
+        return
+
+    summary = query_intelligence.combine_profiles(profiles)
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Profiled Rows", f"{summary['total_rows']:,}")
+    with col2:
+        st.metric("Dataset Types", ", ".join(summary["types"]))
+    with col3:
+        ready = []
+        if summary["has_text"]:
+            ready.append("Text")
+        if summary["has_numeric"]:
+            ready.append("Numeric")
+        if summary["has_dates"]:
+            ready.append("Trends")
+        st.metric("Ready For", ", ".join(ready) if ready else "Review")
+
+    with st.expander("Suggested Questions", expanded=False):
+        questions = []
+        for profile in profiles[:3]:
+            questions.extend(query_intelligence.suggest_questions(profile, limit=2))
+        for idx, question in enumerate(_dedupe(questions)[:5]):
+            if st.button(question, key=f"home_question_{idx}", use_container_width=True):
+                query_queue.queue_question(st.session_state, question)
+                st.success("Queued. Open Query Interface to review, edit, and run it.")
+
+
+def _dedupe(items):
+    seen = set()
+    result = []
+    for item in items:
+        if item and item not in seen:
+            result.append(item)
+            seen.add(item)
+    return result

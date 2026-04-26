@@ -84,12 +84,12 @@ def setup_test_environment():
     
     try:
         os.unlink(temp_db_path)
-    except:
+    except OSError:
         pass
     
     try:
         shutil.rmtree(temp_chroma_dir, ignore_errors=True)
-    except:
+    except OSError:
         pass
 
 

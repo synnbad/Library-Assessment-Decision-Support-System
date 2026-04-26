@@ -4,7 +4,6 @@ This script tests the key functions used by the data upload page.
 """
 
 from modules import csv_handler
-import pandas as pd
 from io import StringIO
 
 

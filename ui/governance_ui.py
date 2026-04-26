@@ -6,6 +6,8 @@ data collection practices, privacy protections, and ethical use guidelines.
 """
 
 import streamlit as st
+from modules import csv_handler, query_intelligence
+from ui import smart_guidance
 
 
 def show_data_governance_page():
@@ -18,6 +20,8 @@ def show_data_governance_page():
     **CARE** (Collective Benefit, Authority to Control, Responsibility, Ethics) principles 
     to ensure responsible and ethical management of library assessment data.
     """)
+
+    _display_governance_readiness()
     
     _display_fair_principles()
     _display_care_principles()
@@ -26,6 +30,67 @@ def show_data_governance_page():
     _display_ethical_guidelines()
     _display_user_control_mechanisms()
     _display_additional_resources()
+
+
+def _display_governance_readiness():
+    """Display live metadata and data-readiness signals for uploaded datasets."""
+    datasets = csv_handler.get_datasets()
+    st.markdown("---")
+    st.markdown("## Governance Readiness")
+    if not datasets:
+        st.info("Upload a dataset to see FAIR/CARE readiness checks.")
+        return
+
+    profiles = []
+    metadata_gaps = []
+    for dataset in datasets:
+        try:
+            profile = smart_guidance.build_profile(dataset)
+            if profile:
+                profiles.append(profile)
+        except Exception:
+            pass
+        missing = [
+            field
+            for field in ("title", "description", "source", "usage_notes", "ethical_considerations")
+            if not dataset.get(field)
+        ]
+        if missing:
+            metadata_gaps.append((dataset["name"], missing))
+
+    summary = query_intelligence.combine_profiles(profiles)
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Datasets", len(datasets))
+    with col2:
+        st.metric("Profiled Rows", f"{summary['total_rows']:,}" if profiles else "0")
+    with col3:
+        st.metric("Metadata Gaps", len(metadata_gaps))
+
+    if metadata_gaps:
+        with st.expander("Metadata Fields to Improve", expanded=True):
+            for name, missing in metadata_gaps:
+                st.warning(f"{name}: add {', '.join(missing)}")
+    else:
+        st.success("All datasets include the core governance metadata fields.")
+
+    warnings = [warning for profile in profiles for warning in profile.warnings]
+    if warnings:
+        with st.expander("Data Quality Signals", expanded=False):
+            for warning in warnings[:10]:
+                st.warning(warning)
+
+    questions = []
+    for profile in profiles[:3]:
+        questions.append(f"What limitations should I document for {profile.name}?")
+        questions.append(f"What ethical considerations apply to {profile.name}?")
+    if questions:
+        st.markdown("### Governance Questions")
+        smart_guidance.display_question_buttons(
+            questions,
+            key_prefix="governance_question",
+            limit=5,
+        )
 
 
 def _display_fair_principles():

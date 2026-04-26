@@ -10,8 +10,6 @@ Scans the repository structure and classifies files as:
 Generates a structured audit report for review.
 """
 
-import os
-import json
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -310,7 +308,7 @@ These files are part of the Library Assessment Decision Support System and shoul
         output_file.write_text(md_content)
         
         print(f"Audit report saved to: {output_path}")
-        print(f"\nSummary:")
+        print("\nSummary:")
         print(f"  Canonical files: {report['summary']['canonical_files']}")
         print(f"  Legacy files: {report['summary']['legacy_files']}")
         print(f"  Shared files: {report['summary']['shared_files']}")

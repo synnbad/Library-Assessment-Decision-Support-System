@@ -30,9 +30,9 @@ _MOCKED_MODULES = {
 _ORIGINAL_MODULES = {name: sys.modules.get(name) for name in _MOCKED_MODULES}
 sys.modules.update(_MOCKED_MODULES)
 
-from modules.rag_query import RAGQuery
-from modules.report_generator import generate_narrative
-from modules.qualitative_analysis import generate_summary
+from modules.rag_query import RAGQuery  # noqa: E402
+from modules.report_generator import generate_narrative  # noqa: E402
+from modules.qualitative_analysis import generate_summary  # noqa: E402
 
 for name, original_module in _ORIGINAL_MODULES.items():
     if original_module is None:

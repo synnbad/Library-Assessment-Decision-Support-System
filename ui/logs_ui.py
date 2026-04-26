@@ -8,6 +8,8 @@ performance metrics, and audit trails.
 import streamlit as st
 import pandas as pd
 from modules.logging_service import get_recent_logs, get_error_summary, get_operation_stats, get_access_log_summary, APP_LOG_FILE, ERROR_LOG_FILE
+from modules import workflow_insights
+from ui import smart_guidance
 
 
 def show_logs_page():
@@ -63,16 +65,40 @@ def _display_overview_tab(hours):
     logs = get_recent_logs(limit=500)
     errors = get_error_summary(hours=hours)
     ops = get_operation_stats(hours=hours)
+    recent_queries = workflow_insights.get_recent_query_logs(limit=25)
+    query_summary = workflow_insights.query_activity_summary(recent_queries)
 
     total = len(logs)
     err_count = sum(r["count"] for r in errors)
-    warn_count = sum(1 for l in logs if l.get("level") == "WARNING")
+    warn_count = sum(1 for entry in logs if entry.get("level") == "WARNING")
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Total Log Entries", total)
     c2.metric("Errors (window)", err_count, delta=None)
     c3.metric("Warnings (all)", warn_count)
     c4.metric("Operations Tracked", len(ops))
+
+    q1, q2, q3 = st.columns(3)
+    q1.metric("Recent Queries", query_summary["count"])
+    avg_confidence = query_summary["average_confidence"]
+    q2.metric("Avg Retrieval Score", f"{avg_confidence:.0%}" if avg_confidence is not None else "N/A")
+    q3.metric("Low Evidence Queries", query_summary["low_confidence_count"])
+
+    if recent_queries:
+        with st.expander("Recent Query Activity", expanded=False):
+            query_df = pd.DataFrame(recent_queries)
+            st.dataframe(
+                query_df[["timestamp", "confidence", "processing_time_ms", "question"]].rename(
+                    columns={"confidence": "retrieval_score"}
+                ),
+                use_container_width=True,
+                hide_index=True,
+            )
+            for idx, row in enumerate(recent_queries[:5]):
+                smart_guidance.queue_question_button(
+                    f"Follow up on: {row['question'][:80]}",
+                    key=f"log_followup_{idx}",
+                )
 
     if ops:
         st.markdown("#### Operation Summary")

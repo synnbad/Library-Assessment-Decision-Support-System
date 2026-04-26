@@ -15,7 +15,6 @@ from modules.qualitative_analysis import (
     analyze_dataset_sentiment,
     extract_themes
 )
-from modules.database import get_db_connection, execute_update, execute_query
 from config.settings import Settings
 
 
@@ -133,8 +132,8 @@ class TestAnalyzeDatasetSentimentErrorHandling:
         """Test that processing continues with available data when some entries fail."""
         # Mock database queries
         with patch('modules.qualitative_analysis.execute_query') as mock_query, \
-             patch('modules.qualitative_analysis.execute_update') as mock_update, \
-             patch('modules.qualitative_analysis.update_data_provenance') as mock_provenance:
+             patch('modules.qualitative_analysis.execute_update'), \
+             patch('modules.qualitative_analysis.update_data_provenance'):
             
             # Return enough responses
             mock_query.return_value = [

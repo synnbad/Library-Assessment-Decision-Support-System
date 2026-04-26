@@ -166,7 +166,6 @@ class TestMissingVisualizationHandling:
         
         # Mock only bar chart to fail
         from modules import visualization
-        original_create_bar = visualization.create_bar_chart
         
         def mock_create_bar_chart(*args, **kwargs):
             raise Exception("Bar chart error")

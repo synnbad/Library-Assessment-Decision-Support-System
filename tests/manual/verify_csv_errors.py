@@ -11,7 +11,7 @@ from io import StringIO
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from modules import csv_handler
+from modules import csv_handler  # noqa: E402
 
 
 def test_error_case(name: str, csv_content: str, dataset_type: str):

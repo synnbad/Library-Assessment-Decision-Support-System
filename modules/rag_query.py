@@ -136,7 +136,7 @@ from modules.database import execute_query, execute_update
 from modules.csv_handler import add_query_to_provenance
 from modules.pii_detector import redact_pii
 from config.settings import Settings
-from modules.logging_service import get_logger, log_operation
+from modules.logging_service import get_logger
 
 logger = get_logger(__name__)
 

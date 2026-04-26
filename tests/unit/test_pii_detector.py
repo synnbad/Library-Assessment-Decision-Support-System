@@ -321,7 +321,7 @@ class TestEdgeCases:
     def test_email_like_but_invalid(self):
         """Test that invalid email-like strings are handled."""
         text = "This is not@an@email"
-        detected = detect_pii(text)
+        detect_pii(text)
         
         # Should not detect invalid email format
         # (depends on regex strictness)
@@ -329,7 +329,7 @@ class TestEdgeCases:
     def test_phone_like_numbers(self):
         """Test that non-phone numbers are not detected."""
         text = "The year 2024 and number 123456789"
-        detected = detect_pii(text)
+        detect_pii(text)
         
         # May detect 123456789 as phone - this is acceptable
         # as it's better to over-redact than under-redact

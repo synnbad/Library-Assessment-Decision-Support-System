@@ -6,8 +6,8 @@ with statistical summaries, visualizations, and qualitative analysis.
 """
 
 import streamlit as st
-import json
-from modules import csv_handler, report_generator, auth
+from modules import csv_handler, report_generator, auth, workflow_insights
+from ui import smart_guidance
 
 
 def show_report_generation_page():
@@ -25,9 +25,12 @@ def show_report_generation_page():
         caps = d.get('analysis_capabilities', {})
         analyses = caps.get('analyses', {}) if caps else {}
         badges = []
-        if analyses.get('qualitative_sentiment', {}).get('available'): badges.append('qualitative')
-        if analyses.get('correlation', {}).get('available'): badges.append('quantitative')
-        if analyses.get('rag_query', {}).get('available'): badges.append('queryable')
+        if analyses.get('qualitative_sentiment', {}).get('available'):
+            badges.append('qualitative')
+        if analyses.get('correlation', {}).get('available'):
+            badges.append('quantitative')
+        if analyses.get('rag_query', {}).get('available'):
+            badges.append('queryable')
         tag = ', '.join(badges) if badges else d['dataset_type']
         return f"{d['name']} ({d['dataset_type']}) - {tag}"
 
@@ -50,6 +53,14 @@ def show_report_generation_page():
 
     selected_dataset_ids = [dataset_options[lbl] for lbl in selected_labels]
     selected_datasets = [d for d in datasets if d['id'] in selected_dataset_ids]
+    selected_profiles = []
+    for dataset in selected_datasets:
+        try:
+            profile = smart_guidance.build_profile(dataset)
+            if profile:
+                selected_profiles.append(profile)
+        except Exception:
+            continue
 
     # Auto-detect what options to enable
     has_qualitative = any(
@@ -72,9 +83,12 @@ def show_report_generation_page():
     # Show what was auto-detected
     if has_qualitative or has_quantitative or has_viz_data:
         detected = []
-        if has_qualitative: detected.append("qualitative analysis")
-        if has_quantitative: detected.append("quantitative analysis")
-        if has_viz_data: detected.append("visualizations")
+        if has_qualitative:
+            detected.append("qualitative analysis")
+        if has_quantitative:
+            detected.append("quantitative analysis")
+        if has_viz_data:
+            detected.append("visualizations")
         st.success(f"Auto-detected: {', '.join(detected)} - options pre-checked below.")
 
     col1, col2, col3 = st.columns(3)
@@ -90,6 +104,23 @@ def show_report_generation_page():
 
     custom_title = st.text_input("Custom Report Title (Optional)",
         placeholder="Leave blank for auto-generated title")
+
+    pinned_insights = _display_pinned_insights()
+
+    if selected_profiles:
+        st.markdown("### Report Blueprint")
+        sections = smart_guidance.report_section_suggestions(selected_profiles)
+        st.markdown("Suggested sections: " + ", ".join(sections))
+        with st.expander("Questions to Answer Before Reporting", expanded=False):
+            prep_questions = smart_guidance.report_prep_questions(selected_profiles)
+            if prep_questions:
+                smart_guidance.display_question_buttons(
+                    prep_questions,
+                    key_prefix="report_prep_question",
+                    limit=6,
+                )
+            else:
+                st.caption("The selected datasets already look ready for a basic report.")
 
     # Show per-dataset capability summary
     with st.expander("Dataset Capability Summary", expanded=False):
@@ -123,7 +154,8 @@ def show_report_generation_page():
                 dataset_ids=selected_dataset_ids,
                 include_viz=include_visualizations,
                 include_qualitative=include_qualitative,
-                include_quantitative=include_quantitative
+                include_quantitative=include_quantitative,
+                pinned_insights=pinned_insights,
             )
 
             if custom_title:
@@ -158,6 +190,45 @@ def show_report_generation_page():
     _display_help_section()
 
 
+def _display_pinned_insights():
+    """Show query answers pinned for report drafting."""
+    username = st.session_state.get("username")
+    insights = (
+        workflow_insights.sync_session_insights(st.session_state, username)
+        if username
+        else workflow_insights.get_pinned_insights(st.session_state)
+    )
+    if not insights:
+        return []
+
+    st.markdown("### Pinned Query Insights")
+    st.caption("These query answers can be used while drafting or revising the report narrative.")
+    for idx, insight in enumerate(insights, 1):
+        with st.expander(f"{idx}. {insight.get('question', 'Pinned insight')}", expanded=False):
+            st.markdown(insight.get("answer", ""))
+            insight_id = insight.get("id")
+            if insight_id and st.button("Remove Insight", key=f"remove_pinned_{insight_id}"):
+                workflow_insights.delete_pinned_insight(insight_id, username=username)
+                st.session_state.pop(workflow_insights.PINNED_INSIGHTS_KEY, None)
+                st.rerun()
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.download_button(
+            "Download Pinned Insights",
+            data=workflow_insights.format_insights_for_report(insights),
+            file_name="pinned_query_insights.md",
+            mime="text/markdown",
+            use_container_width=True,
+        )
+    with col2:
+        if st.button("Clear Pinned Insights", use_container_width=True):
+            workflow_insights.clear_pinned_insights(st.session_state, username=username)
+            st.rerun()
+
+    return insights
+
+
 def _display_report_preview(report):
     """Display the generated report preview."""
     st.markdown("---")
@@ -188,10 +259,14 @@ def _display_report_preview(report):
             for metric_name, stats in summary['statistics'].items():
                 with st.expander(f"{metric_name}", expanded=False):
                     cols = st.columns(5)
-                    if 'mean' in stats: cols[0].metric("Mean", f"{stats['mean']:.2f}")
-                    if 'median' in stats: cols[1].metric("Median", f"{stats['median']:.2f}")
-                    if 'std_dev' in stats: cols[2].metric("Std Dev", f"{stats['std_dev']:.2f}")
-                    if 'count' in stats: cols[3].metric("Count", stats['count'])
+                    if 'mean' in stats:
+                        cols[0].metric("Mean", f"{stats['mean']:.2f}")
+                    if 'median' in stats:
+                        cols[1].metric("Median", f"{stats['median']:.2f}")
+                    if 'std_dev' in stats:
+                        cols[2].metric("Std Dev", f"{stats['std_dev']:.2f}")
+                    if 'count' in stats:
+                        cols[3].metric("Count", stats['count'])
                     if 'min' in stats and 'max' in stats:
                         cols[4].metric("Range", f"{stats['min']:.2f} - {stats['max']:.2f}")
 

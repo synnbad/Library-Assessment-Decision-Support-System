@@ -21,12 +21,11 @@ Usage:
 import logging
 import logging.handlers
 import time
-import traceback
 import json
 import functools
 from datetime import datetime, UTC
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional
 
 from config.settings import Settings
 
@@ -67,7 +66,6 @@ class DatabaseLogHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         try:
             from modules.database import execute_update  # lazy import to avoid circular deps
-            msg = self.format(record)
             exc_text = None
             if record.exc_info:
                 exc_text = logging.Formatter().formatException(record.exc_info)

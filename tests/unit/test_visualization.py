@@ -4,7 +4,6 @@ Unit tests for visualization module
 Tests the chart generation and export functions.
 """
 
-import pytest
 import pandas as pd
 import plotly.graph_objects as go
 from modules.visualization import (
@@ -86,7 +85,7 @@ class TestChartExport:
         try:
             content_str = img_bytes.decode('utf-8', errors='ignore')
             is_html = '<html>' in content_str or 'plotly' in content_str.lower()
-        except:
+        except UnicodeDecodeError:
             is_html = False
         
         # Should be either PNG or HTML

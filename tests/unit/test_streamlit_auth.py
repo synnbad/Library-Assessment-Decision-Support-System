@@ -19,7 +19,7 @@ class TestStreamlitAuthentication:
         
         auth.init_session_state(session_state)
         
-        assert session_state.authenticated == False
+        assert not session_state.authenticated
         assert session_state.username is None
         assert session_state.login_attempts == 0
     
@@ -29,7 +29,7 @@ class TestStreamlitAuthentication:
         
         auth.login_user(session_state, "testuser")
         
-        assert session_state.authenticated == True
+        assert session_state.authenticated
         assert session_state.username == "testuser"
         assert session_state.login_attempts == 0
     
@@ -41,7 +41,7 @@ class TestStreamlitAuthentication:
         with patch('modules.auth.log_access'):
             auth.logout_user(session_state)
         
-        assert session_state.authenticated == False
+        assert not session_state.authenticated
         assert session_state.username is None
     
     def test_is_authenticated_true(self):
@@ -51,7 +51,7 @@ class TestStreamlitAuthentication:
         
         result = auth.is_authenticated(session_state)
         
-        assert result == True
+        assert result
     
     def test_is_authenticated_false(self):
         """Test is_authenticated returns False for unauthenticated user."""
@@ -60,7 +60,7 @@ class TestStreamlitAuthentication:
         
         result = auth.is_authenticated(session_state)
         
-        assert result == False
+        assert not result
     
     def test_get_current_user_authenticated(self):
         """Test get_current_user returns username when authenticated."""
@@ -113,14 +113,14 @@ class TestAuthenticationFlow:
         
         # Authenticate (now returns tuple)
         is_valid, error_msg = auth.authenticate("testuser", "testpass")
-        assert is_valid == True
+        assert is_valid
         assert error_msg is None
         
         # Login user
         auth.login_user(session_state, "testuser")
         
         # Verify session state
-        assert session_state.authenticated == True
+        assert session_state.authenticated
         assert session_state.username == "testuser"
         
         # Mock get method for is_authenticated and get_current_user
@@ -148,12 +148,12 @@ class TestAuthenticationFlow:
         
         # Attempt authentication with wrong password (now returns tuple)
         is_valid, error_msg = auth.authenticate("testuser", "wrongpass")
-        assert is_valid == False
+        assert not is_valid
         assert error_msg is not None
         assert "Invalid username or password" in error_msg
         
         # Session state should remain unauthenticated
-        assert session_state.authenticated == False
+        assert not session_state.authenticated
         assert session_state.username is None
     
     @patch('modules.auth.log_access')
@@ -168,7 +168,7 @@ class TestAuthenticationFlow:
         auth.logout_user(session_state)
         
         # Verify session cleared
-        assert session_state.authenticated == False
+        assert not session_state.authenticated
         assert session_state.username is None
         
         # Verify logout was logged

@@ -11,7 +11,7 @@ Validates Requirements: 2.5
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from modules import rag_query
 from modules.rag_query import DependencyUnavailableError, ModelNotFoundError, RAGQuery, TimeoutError
 from config.settings import Settings

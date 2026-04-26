@@ -8,6 +8,8 @@ sentiment analysis and theme extraction from survey responses.
 import streamlit as st
 import pandas as pd
 from modules import csv_handler, qualitative_analysis, visualization, auth
+from modules import query_intelligence
+from ui import smart_guidance
 
 
 def show_qualitative_analysis_page():
@@ -60,6 +62,22 @@ def show_qualitative_analysis_page():
         st.metric("Total Rows", selected_dataset['row_count'])
     with col3:
         st.metric("Upload Date", selected_dataset['upload_date'][:10])
+
+    selected_profile = None
+    try:
+        selected_profile = smart_guidance.build_profile(selected_dataset)
+    except Exception as e:
+        st.caption(f"Smart guidance unavailable for this dataset: {e}")
+
+    if selected_profile:
+        st.markdown("### Suggested Qualitative Paths")
+        smart_guidance.display_profile_summary(selected_profile)
+        st.caption(query_intelligence.recommended_next_action([selected_profile], has_indexed_data=True))
+        smart_guidance.display_question_buttons(
+            query_intelligence.suggest_questions(selected_profile, limit=4),
+            key_prefix=f"qual_suggested_{selected_dataset_id}",
+            limit=4,
+        )
     
     st.markdown("---")
     
@@ -207,6 +225,14 @@ def _display_analysis_results(results):
     
     # Export section
     _display_export_section(results, sentiment_chart, theme_chart)
+
+    st.markdown("---")
+    st.markdown("### Continue in Query")
+    smart_guidance.display_question_buttons(
+        smart_guidance.qualitative_next_questions(results["dataset_name"]),
+        key_prefix=f"qual_results_{results['dataset_id']}",
+        limit=4,
+    )
 
 
 def _display_export_section(results, sentiment_chart, theme_chart):
