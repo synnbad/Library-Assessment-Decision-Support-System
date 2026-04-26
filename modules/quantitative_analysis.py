@@ -126,6 +126,7 @@ import ollama
 from typing import Dict, Any, Optional, List
 
 from config.settings import Settings
+from modules.data_importer import METRIC_DATASET_TYPES, TEXT_DATASET_TYPES
 from modules.database import execute_query, execute_update
 from modules.pii_detector import redact_pii
 from modules.logging_service import get_logger, log_operation
@@ -1140,7 +1141,7 @@ def _load_dataset_data(dataset_id: int, db_path: Optional[str] = None) -> pd.Dat
     dataset_type = dataset_record.get('dataset_type', '')
     
     # Load data based on dataset type
-    if dataset_type == 'survey':
+    if dataset_type in TEXT_DATASET_TYPES:
         # Load survey responses
         rows = execute_query(
             "SELECT * FROM survey_responses WHERE dataset_id = ?",
@@ -1175,7 +1176,7 @@ def _load_dataset_data(dataset_id: int, db_path: Optional[str] = None) -> pd.Dat
         
         return df
     
-    elif dataset_type in ['usage', 'circulation']:
+    elif dataset_type in METRIC_DATASET_TYPES:
         # Load usage statistics
         rows = execute_query(
             "SELECT * FROM usage_statistics WHERE dataset_id = ?",
@@ -1241,7 +1242,7 @@ def _load_dataset_data(dataset_id: int, db_path: Optional[str] = None) -> pd.Dat
     else:
         raise ValueError(
             f"Unsupported dataset type '{dataset_type}' for dataset {dataset_id}. "
-            f"Supported types: 'survey', 'usage', 'circulation'. "
+            f"Supported types: {', '.join(sorted(TEXT_DATASET_TYPES | METRIC_DATASET_TYPES))}. "
             f"Please check the dataset configuration."
         )
 

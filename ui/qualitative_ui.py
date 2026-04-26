@@ -7,7 +7,7 @@ sentiment analysis and theme extraction from survey responses.
 
 import streamlit as st
 import pandas as pd
-from modules import csv_handler, qualitative_analysis, visualization, auth
+from modules import csv_handler, data_importer, qualitative_analysis, visualization, auth
 from modules import query_intelligence
 from ui import smart_guidance
 
@@ -31,7 +31,7 @@ def show_qualitative_analysis_page():
         return f"{d['name']} (ID: {d['id']}, {d['dataset_type']}) - {tag}"
 
     dataset_options = {_label(d): d['id'] for d in datasets}
-    survey_datasets = [d for d in datasets if d['dataset_type'] == 'survey']
+    survey_datasets = [d for d in datasets if d['dataset_type'] in data_importer.TEXT_DATASET_TYPES]
 
     # Default to first survey dataset if available
     default_label = next((_label(d) for d in survey_datasets), list(dataset_options.keys())[0])

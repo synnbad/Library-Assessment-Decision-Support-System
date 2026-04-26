@@ -8,7 +8,7 @@ including correlation, trend, comparative, and distribution analysis.
 import streamlit as st
 import pandas as pd
 import time
-from modules import csv_handler, quantitative_analysis, auth
+from modules import csv_handler, data_importer, quantitative_analysis, auth
 from ui import smart_guidance
 
 
@@ -31,7 +31,7 @@ def show_quantitative_analysis_page():
         return f"{d['name']} (ID: {d['id']}, {d['dataset_type']}) - {tag}"
 
     dataset_options = {_label(d): d['id'] for d in datasets}
-    quant_datasets = [d for d in datasets if d['dataset_type'] in ('usage', 'circulation')]
+    quant_datasets = [d for d in datasets if d['dataset_type'] in data_importer.METRIC_DATASET_TYPES]
     default_label = next((_label(d) for d in quant_datasets), list(dataset_options.keys())[0])
 
     # Dataset selector
@@ -51,7 +51,7 @@ def show_quantitative_analysis_page():
     if analysis_info['recommended'] == 'quantitative':
         st.success(analysis_info['reason'])
     else:
-        st.warning(f"{analysis_info['reason']} Consider using a usage or circulation dataset instead.")
+        st.warning(f"{analysis_info['reason']} Consider using a metric-oriented assessment dataset instead.")
     
     # Display dataset info
     col1, col2, col3 = st.columns(3)

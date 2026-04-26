@@ -4,13 +4,15 @@ Local-first Streamlit application for library assessment workflows. The app help
 
 ## Key Capabilities
 
-- Upload survey, usage, and circulation CSV datasets.
-- Validate and profile datasets before analysis.
+- Import CSV, TSV, TXT, Excel, and JSON assessment datasets.
+- Normalize survey, usage, circulation, e-resource, spaces, instruction, reference, events, collection, and benchmark data into analysis-ready tables.
+- Validate, profile, and generate data dictionaries before analysis.
 - Store local data in SQLite with provenance metadata.
 - Index uploaded records with ChromaDB for retrieval-augmented querying.
 - Use Ollama for local answer generation.
 - Suggest proactive questions based on dataset shape and quality.
 - Run sentiment, theme, trend, comparison, and distribution analysis.
+- Plan assessment projects, peer benchmarks, dashboard user stories, KPI blueprints, modeling-readiness checks, and staff training outlines.
 - Pin query insights into report generation.
 - Export reports as Markdown or PDF.
 - Detect and redact PII in retrieved context and generated outputs.
@@ -23,6 +25,7 @@ Local-first Streamlit application for library assessment workflows. The app help
 |-- config/              Environment-backed application settings
 |-- data/                Local runtime storage and committed sample JSON fixtures
 |-- docs/                Architecture, user, testing, data, and project documentation
+|   `-- presentations/   Generated course and demo presentation decks
 |-- examples/            Small demonstration scripts
 |-- models/              Placeholder for local model artifacts
 |-- modules/             Core business logic, data, RAG, analysis, reports, logging
@@ -86,15 +89,40 @@ ENABLE_DEMO_LOGIN=false
 
 `EMBEDDING_LOCAL_FILES_ONLY=true` keeps embedding model loading local-first and avoids runtime Hugging Face network calls after the model is available locally.
 
-## Supported CSV Inputs
+## Supported Data Imports
 
-The upload UI supports flexible column mapping, but these canonical shapes are the safest path:
+The import UI accepts CSV, TSV, TXT, Excel `.xlsx`, and JSON files. It normalizes common library assessment exports into CSV-compatible tables that continue through the existing metadata, validation, indexing, analysis, visualization, governance, and reporting workflow.
+
+Supported assessment domains:
+
+- Survey and feedback data
+- General usage statistics
+- Circulation and borrowing data
+- E-resource and COUNTER-style usage reports
+- Spaces, room bookings, and gate counts
+- Instruction and learning assessment data
+- Reference, chat, and service interaction logs
+- Events and program attendance
+- Collection assessment data
+- Peer, ACRL, ARL, IPEDS, or benchmark comparison data
+
+Canonical table shapes are still supported and remain the safest path for direct CSV uploads:
 
 - Survey: `response_date`, `question`, `response_text`
 - Usage: `date`, `metric_name`, `metric_value`
 - Circulation: `checkout_date`, `material_type`, `patron_type`
 
 Sample CSV files are available in `test_data/`.
+
+## Assessment Workspace
+
+The Assessment Workspace adds workflow support around the analysis engine:
+
+- Projects: goals, research questions, stakeholders, methods, attached datasets, findings, and recommendations.
+- Benchmarking: peer comparison summaries, rank, percentile, and top-performer views.
+- Dashboard Studio: user stories, KPI recommendations, audience notes, and visualization plans for Power BI or Tableau handoff.
+- Modeling Checks: missingness, numeric readiness, trend readiness, and outlier signals.
+- Methods & Training: generated workshop outlines and staff-facing documentation starters.
 
 ## Testing
 
@@ -114,7 +142,15 @@ python -m compileall modules ui tests
 Current verified baseline:
 
 ```text
-233 passed
+246 passed
+```
+
+## Presentation
+
+The course presentation deck for `NLP for Information Professionals` is available at:
+
+```text
+docs/presentations/nlp_final_project_library_assessment_assistant.pptx
 ```
 
 ## Documentation

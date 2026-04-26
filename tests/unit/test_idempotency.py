@@ -32,8 +32,32 @@ def test_idempotency_record_lifecycle(tmp_path, monkeypatch):
     assert cached["idempotency_reused"] is True
 
 
-def test_database_schema_version_five_adds_idempotency_tables(tmp_path):
+def test_database_schema_version_six_adds_idempotency_and_workflow_tables(tmp_path):
     db_path = tmp_path / "schema.db"
+    init_database(str(db_path))
+    migrate_database(str(db_path))
+
+    tables = {
+        row["name"]
+        for row in execute_query(
+            "SELECT name FROM sqlite_master WHERE type = ?",
+            ("table",),
+            str(db_path),
+        )
+    }
+    version = execute_query("SELECT MAX(version) AS version FROM schema_version", db_path=str(db_path))
+    query_log_columns = execute_query("PRAGMA table_info(query_logs)", db_path=str(db_path))
+
+    assert "idempotency_keys" in tables
+    assert "assessment_projects" in tables
+    assert "dashboard_blueprints" in tables
+    assert "training_materials" in tables
+    assert version[0]["version"] == 6
+    assert "idempotency_key" in {row["name"] for row in query_log_columns}
+
+
+def test_database_schema_version_five_name_kept_for_backwards_compatibility(tmp_path):
+    db_path = tmp_path / "schema_name_compat.db"
     init_database(str(db_path))
     migrate_database(str(db_path))
 
@@ -42,12 +66,8 @@ def test_database_schema_version_five_adds_idempotency_tables(tmp_path):
         ("table", "idempotency_keys"),
         str(db_path),
     )
-    version = execute_query("SELECT MAX(version) AS version FROM schema_version", db_path=str(db_path))
-    query_log_columns = execute_query("PRAGMA table_info(query_logs)", db_path=str(db_path))
 
     assert tables == [{"name": "idempotency_keys"}]
-    assert version[0]["version"] == 5
-    assert "idempotency_key" in {row["name"] for row in query_log_columns}
 
 
 def test_completed_result_json_is_plain_json(tmp_path, monkeypatch):

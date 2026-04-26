@@ -110,6 +110,7 @@ from typing import Dict, List, Optional, Any
 import statistics
 from modules.database import execute_query
 from modules import idempotency
+from modules.data_importer import METRIC_DATASET_TYPES, TEXT_DATASET_TYPES
 from modules.pii_detector import redact_pii
 from config.settings import Settings
 
@@ -174,9 +175,9 @@ def generate_statistical_summary(dataset_id: int, db_path: Optional[str] = None)
     }
     
     # Calculate statistics based on dataset type
-    if dataset['dataset_type'] == 'survey':
+    if dataset['dataset_type'] in TEXT_DATASET_TYPES:
         result = _calculate_survey_statistics(dataset_id, result, db_path)
-    elif dataset['dataset_type'] == 'usage':
+    elif dataset['dataset_type'] in METRIC_DATASET_TYPES:
         result = _calculate_usage_statistics(dataset_id, result, db_path)
     else:
         # For other types, provide basic counts

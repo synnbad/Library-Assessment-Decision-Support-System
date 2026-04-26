@@ -52,7 +52,7 @@ import json
 from datetime import datetime
 from typing import Optional, Dict, Any, List, Tuple
 from modules.database import execute_query, execute_update, get_db_connection
-from modules import idempotency
+from modules import data_importer, idempotency
 from modules.logging_service import get_logger, log_operation
 
 logger = get_logger(__name__)
@@ -190,6 +190,10 @@ SUGGESTED_COLUMNS = {
         "description": "Circulation data with checkout information"
     }
 }
+
+TEXT_DATASET_TYPES = data_importer.TEXT_DATASET_TYPES
+METRIC_DATASET_TYPES = data_importer.METRIC_DATASET_TYPES
+SUPPORTED_DATASET_TYPES = set(data_importer.DATASET_TYPES)
 
 # Legacy support - keep for backward compatibility with tests
 REQUIRED_COLUMNS = {
@@ -373,11 +377,17 @@ def auto_detect_metadata(df: pd.DataFrame, dataset_type: str, filename: str) -> 
     Returns:
         Dict with auto-detected metadata fields
     """
-    metadata = {}
+    enhanced = data_importer.build_metadata_suggestions(df, dataset_type, filename)
+    metadata = {
+        "title": enhanced.get("title", ""),
+        "description": enhanced.get("description", ""),
+        "source": enhanced.get("source", ""),
+        "keywords": enhanced.get("keywords", []),
+    }
     
     # Auto-generate title from filename
-    title = filename.replace('.csv', '').replace('_', ' ').replace('-', ' ').title()
-    metadata['title'] = title
+    title = filename.rsplit('.', 1)[0].replace('_', ' ').replace('-', ' ').title()
+    metadata['title'] = metadata.get("title") or title
     
     # Generate description based on dataset characteristics
     num_rows = len(df)
@@ -417,7 +427,9 @@ def auto_detect_metadata(df: pd.DataFrame, dataset_type: str, filename: str) -> 
             except (TypeError, ValueError, OverflowError):
                 continue
     
-    metadata['description'] = " ".join(description_parts)
+    legacy_description = " ".join(description_parts)
+    if legacy_description not in metadata.get("description", ""):
+        metadata['description'] = f"{metadata.get('description', '').strip()} {legacy_description}".strip()
     
     # Auto-detect keywords from columns and dataset type
     keywords = [dataset_type]
@@ -448,9 +460,11 @@ def auto_detect_metadata(df: pd.DataFrame, dataset_type: str, filename: str) -> 
     if any(str(current_year) in str(val) for col in df.columns for val in df[col].head()):
         keywords.append(str(current_year))
     
-    metadata['keywords'] = keywords
+    metadata['keywords'] = _dedupe_metadata_values([*metadata.get("keywords", []), *keywords])
     
     # Suggest source based on dataset characteristics
+    if metadata.get("source") and metadata["source"] != "Data Import Hub":
+        return metadata
     if 'qualtrics' in filename.lower():
         metadata['source'] = 'Qualtrics Survey'
     elif 'google' in filename.lower():
@@ -461,6 +475,18 @@ def auto_detect_metadata(df: pd.DataFrame, dataset_type: str, filename: str) -> 
         metadata['source'] = 'CSV Upload'
     
     return metadata
+
+
+def _dedupe_metadata_values(values: List[Any]) -> List[str]:
+    """Return normalized unique metadata values while preserving order."""
+    seen = set()
+    result = []
+    for value in values:
+        text = str(value).strip()
+        if text and text not in seen:
+            result.append(text)
+            seen.add(text)
+    return result
 
 
 @log_operation("store_dataset")
@@ -569,16 +595,25 @@ def store_dataset(
         )
     )
     
-    # Store data based on dataset type
-    if dataset_type == "survey":
+    # Store data based on dataset type. New assessment domains reuse the existing
+    # canonical tables so querying, visualizations, and reports keep working.
+    if dataset_type in TEXT_DATASET_TYPES:
         _store_survey_data(df, dataset_id)
     elif dataset_type == "usage":
         _store_usage_data(df, dataset_id)
     elif dataset_type == "circulation":
         _store_circulation_data(df, dataset_id)
+    elif dataset_type in METRIC_DATASET_TYPES:
+        _store_usage_data(df, dataset_id)
+    else:
+        _store_usage_data(df, dataset_id)
 
     # Evaluate and persist analysis capabilities
     capabilities = evaluate_dataset_capabilities(df, dataset_type, dataset_id)
+    capabilities["data_dictionary"] = data_importer.build_data_dictionary(df)
+    capabilities["metadata_suggestions"] = data_importer.build_metadata_suggestions(
+        df, dataset_type, dataset_name
+    )
     execute_update(
         "UPDATE datasets SET analysis_capabilities = ? WHERE id = ?",
         (json.dumps(capabilities), dataset_id)
@@ -704,12 +739,12 @@ def get_preview(dataset_id: int, n_rows: int = 10) -> pd.DataFrame:
     dataset_type = datasets[0]['dataset_type']
     
     # Query appropriate table
-    if dataset_type == "survey":
+    if dataset_type in TEXT_DATASET_TYPES:
         rows = execute_query(
             "SELECT * FROM survey_responses WHERE dataset_id = ? LIMIT ?",
             (dataset_id, n_rows)
         )
-    else:  # usage or circulation
+    else:
         rows = execute_query(
             "SELECT * FROM usage_statistics WHERE dataset_id = ? LIMIT ?",
             (dataset_id, n_rows)
@@ -895,7 +930,7 @@ def export_dataset(dataset_id: int, format: str = 'csv') -> Optional[bytes]:
     dataset_type = datasets[0]['dataset_type']
     
     # Query data
-    if dataset_type == "survey":
+    if dataset_type in TEXT_DATASET_TYPES:
         rows = execute_query(
             "SELECT * FROM survey_responses WHERE dataset_id = ?",
             (dataset_id,)
@@ -984,10 +1019,12 @@ def evaluate_dataset_capabilities(df: pd.DataFrame, dataset_type: str, dataset_i
     # --- Qualitative ---
     has_text = len(text_cols) > 0
     enough_for_qual = row_count >= 10
-    qual_available = dataset_type == 'survey' and has_text and enough_for_qual
+    is_text_type = dataset_type in TEXT_DATASET_TYPES
+    is_metric_type = dataset_type in METRIC_DATASET_TYPES
+    qual_available = is_text_type and has_text and enough_for_qual
 
     qual_reason = ""
-    if dataset_type != 'survey':
+    if not is_text_type:
         qual_reason = f"Dataset type is '{dataset_type}' — qualitative analysis requires survey/text data."
     elif not has_text:
         qual_reason = "No text columns detected."
@@ -999,18 +1036,18 @@ def evaluate_dataset_capabilities(df: pd.DataFrame, dataset_type: str, dataset_i
     # --- Correlation ---
     # Need ≥2 numeric cols and ≥10 complete rows
     usable_numeric = [c for c in numeric_cols if df[c].notna().sum() >= 10]
-    corr_available = len(usable_numeric) >= 2 and dataset_type in ('usage', 'circulation')
+    corr_available = len(usable_numeric) >= 2 and is_metric_type
     corr_reason = (
         f"Ready: {len(usable_numeric)} numeric columns with sufficient data."
         if corr_available else
         f"Need ≥2 numeric columns with ≥10 values. Found {len(usable_numeric)} usable."
-        if dataset_type in ('usage', 'circulation') else
+        if is_metric_type else
         "Correlation requires numeric usage/circulation data."
     )
 
     # --- Trend ---
     has_date = len(date_cols) > 0
-    trend_available = has_date and len(usable_numeric) >= 1 and dataset_type in ('usage', 'circulation')
+    trend_available = has_date and len(usable_numeric) >= 1 and is_metric_type
     trend_reason = (
         f"Ready: date column '{date_cols[0]}' + {len(usable_numeric)} numeric metric(s)."
         if trend_available else
@@ -1022,22 +1059,22 @@ def evaluate_dataset_capabilities(df: pd.DataFrame, dataset_type: str, dataset_i
     # --- Comparative ---
     # Need a categorical grouping column and a numeric value column
     cat_cols = [c for c in df.columns if df[c].dtype == object and df[c].nunique() <= 20 and df[c].nunique() >= 2]
-    comp_available = len(cat_cols) >= 1 and len(usable_numeric) >= 1 and dataset_type in ('usage', 'circulation')
+    comp_available = len(cat_cols) >= 1 and len(usable_numeric) >= 1 and is_metric_type
     comp_reason = (
         f"Ready: can compare across '{cat_cols[0]}' ({df[cat_cols[0]].nunique()} groups)."
         if comp_available else
         f"Need a categorical grouping column (≤20 unique values). Found {len(cat_cols)}."
-        if dataset_type in ('usage', 'circulation') else
+        if is_metric_type else
         "Comparative analysis requires usage/circulation data."
     )
 
     # --- Distribution ---
-    dist_available = len(usable_numeric) >= 1 and dataset_type in ('usage', 'circulation')
+    dist_available = len(usable_numeric) >= 1 and is_metric_type
     dist_reason = (
         f"Ready: {len(usable_numeric)} numeric column(s) available."
         if dist_available else
         "Distribution analysis requires at least one numeric column."
-        if dataset_type in ('usage', 'circulation') else
+        if is_metric_type else
         "Distribution analysis requires usage/circulation data."
     )
 
@@ -1090,14 +1127,14 @@ def classify_dataset_for_analysis(dataset: Dict[str, Any]) -> Dict[str, Any]:
         - recommended: 'qualitative' | 'quantitative' | 'both' | 'neither'
     """
     dtype = dataset.get('dataset_type', '')
-    if dtype == 'survey':
+    if dtype in TEXT_DATASET_TYPES:
         return {
             'qualitative': True,
             'quantitative': False,
             'reason': 'Survey datasets contain text responses — best suited for sentiment and theme analysis.',
             'recommended': 'qualitative',
         }
-    elif dtype in ('usage', 'circulation'):
+    elif dtype in METRIC_DATASET_TYPES:
         return {
             'qualitative': False,
             'quantitative': True,

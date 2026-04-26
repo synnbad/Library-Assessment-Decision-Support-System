@@ -7,7 +7,7 @@ including bar charts, line charts, and pie charts.
 
 import streamlit as st
 import pandas as pd
-from modules import csv_handler, visualization, auth
+from modules import csv_handler, data_importer, visualization, auth
 from ui import smart_guidance
 
 
@@ -28,12 +28,12 @@ def show_visualizations_page():
         n_num = len(stats.get('usable_numeric_cols', []))
         has_date = len(stats.get('date_cols', [])) > 0
         hints = []
-        if d['dataset_type'] in ('usage', 'circulation'):
+        if d['dataset_type'] in data_importer.METRIC_DATASET_TYPES:
             if has_date:
                 hints.append('trend')
             if n_num >= 1:
                 hints.append('bar/pie')
-        elif d['dataset_type'] == 'survey':
+        elif d['dataset_type'] in data_importer.TEXT_DATASET_TYPES:
             hints.append('sentiment chart')
         tag = ', '.join(hints) if hints else d['dataset_type']
         return f"{d['name']} ({d['dataset_type']}) - {tag}"
@@ -91,17 +91,17 @@ def show_visualizations_page():
 
         # Auto-detect best chart type and columns
         dtype = selected_dataset['dataset_type']
-        if dtype in ('usage', 'circulation') and date_cols and numeric_cols:
+        if dtype in data_importer.METRIC_DATASET_TYPES and date_cols and numeric_cols:
             default_chart = "Line Chart"
             default_x = date_cols[0]
             default_y = numeric_cols[0]
             st.info(f"Time series detected - Line Chart pre-selected using '{default_x}' vs '{default_y}'.")
-        elif dtype in ('usage', 'circulation') and numeric_cols:
+        elif dtype in data_importer.METRIC_DATASET_TYPES and numeric_cols:
             default_chart = "Bar Chart"
             default_x = text_cols[0] if text_cols else available_columns[0]
             default_y = numeric_cols[0]
             st.info("Numeric data detected - Bar Chart pre-selected.")
-        elif dtype == 'survey':
+        elif dtype in data_importer.TEXT_DATASET_TYPES:
             default_chart = "Pie Chart"
             sentiment_col = next((c for c in available_columns if 'sentiment' in c.lower()), None)
             default_x = sentiment_col or (text_cols[0] if text_cols else available_columns[0])

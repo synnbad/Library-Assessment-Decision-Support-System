@@ -7,7 +7,8 @@ Includes file validation, metadata auto-detection, and dataset management functi
 
 import streamlit as st
 import json
-from modules import csv_handler, auth
+import pandas as pd
+from modules import csv_handler, auth, data_importer
 from modules import query_intelligence
 from modules import query_queue
 
@@ -15,7 +16,7 @@ from modules import query_queue
 def show_data_upload_page():
     """Display data upload page with CSV uploader and FAIR/CARE metadata."""
     st.title("Data Upload")
-    st.markdown("Upload CSV files containing library assessment data with FAIR/CARE metadata.")
+    st.markdown("Import library assessment data with FAIR/CARE metadata and automatic profiling.")
     
     # Create tabs for upload and manage datasets
     tab1, tab2 = st.tabs(["Upload New Dataset", "Manage Datasets"])
@@ -29,32 +30,49 @@ def show_data_upload_page():
 
 def _show_upload_tab():
     """Display the upload new dataset tab."""
-    st.markdown("### Upload New Dataset")
+    st.markdown("### Import New Dataset")
     
-    st.info("Tip: Use the 'Auto-Fill Metadata' button to automatically populate metadata fields based on your dataset!")
+    st.info("Tip: CSV, TSV, Excel, and JSON uploads are normalized into analysis-ready tables.")
     
     # File uploader
     uploaded_file = st.file_uploader(
-        "Choose a CSV file",
-        type=['csv'],
-        help="Upload a CSV file containing survey responses, usage statistics, or circulation data"
+        "Choose a data file",
+        type=list(data_importer.SUPPORTED_EXTENSIONS),
+        help="Upload CSV, TSV, Excel, or JSON data from surveys, ILS, COUNTER, LibCal, LibAnswers, benchmark, or vendor systems."
     )
     
     if uploaded_file is not None:
+        try:
+            parsed_import = data_importer.parse_assessment_file(uploaded_file, uploaded_file.name)
+            df = parsed_import.dataframe
+            detected_type = parsed_import.detected_type
+            uploaded_file.seek(0)
+        except Exception as e:
+            st.error(f"Unable to import this file: {e}")
+            return
+
         # Dataset type selection
+        type_options = data_importer.DATASET_TYPES
+        default_index = type_options.index(detected_type) if detected_type in type_options else 0
         dataset_type = st.selectbox(
             "Dataset Type",
-            ["survey", "usage", "circulation"],
-            help="Select the type of data in your CSV file"
+            type_options,
+            index=default_index,
+            format_func=lambda value: data_importer.DOMAIN_LABELS.get(value, value.title()),
+            help="Detected from file name and columns; adjust if needed before upload."
         )
+
+        if dataset_type != detected_type:
+            df, override_notes = data_importer.normalize_assessment_dataframe(df, dataset_type)
+            parsed_import.notes.extend(override_notes)
         
         # Show helpful information about dataset types
-        dataset_info = {
-            "survey": "Survey data with responses, feedback, or comments. Any column structure is accepted.",
-            "usage": "Usage statistics with dates and metrics (visits, sessions, etc.). Any column structure is accepted.",
-            "circulation": "Circulation data with checkout information. Any column structure is accepted."
-        }
-        st.caption(f"Info: {dataset_info[dataset_type]}")
+        st.caption(
+            f"Detected as {data_importer.DOMAIN_LABELS.get(detected_type, detected_type)}. "
+            f"Using {data_importer.DOMAIN_LABELS.get(dataset_type, dataset_type)} for analysis."
+        )
+        for note in parsed_import.notes:
+            st.info(note)
         
         # Dataset name
         dataset_name = st.text_input(
@@ -84,8 +102,6 @@ def _show_upload_tab():
         # Auto-detect metadata if button clicked
         if auto_detect:
             try:
-                uploaded_file.seek(0)
-                df = csv_handler.parse_csv(uploaded_file)
                 auto_metadata = csv_handler.auto_detect_metadata(df, dataset_type, uploaded_file.name)
                 
                 st.session_state.metadata_title = auto_metadata.get('title', '')
@@ -164,25 +180,19 @@ def _show_upload_tab():
                 st.warning(f"Warning: This dataset has already been uploaded (detected by file hash). Upload date: {duplicate['upload_date']}")
                 st.info("You can still upload it if you want to create a separate copy.")
             
-            # Validate CSV
-            is_valid, error_msg = csv_handler.validate_csv(
-                uploaded_file,
-                dataset_type,
-                strict_mode=False
-            )
+            # Validate normalized tabular data
+            is_valid, error_msg = csv_handler.validate_csv_dataframe(df, dataset_type)
             
             if not is_valid:
-                st.error(f"Error: {error_msg}")
+                st.error(f"Import validation failed: {error_msg}")
             else:
-                st.success("CSV validation passed!")
+                st.success("Import validation passed.")
                 
                 # Show preview
-                uploaded_file.seek(0)
-                df = csv_handler.parse_csv(uploaded_file)
-                
                 st.markdown("#### Preview")
                 st.dataframe(df.head(10), use_container_width=True)
                 st.caption(f"Showing first 10 rows of {len(df)} total rows")
+                _display_data_dictionary(data_importer.build_data_dictionary(df))
                 profile = query_intelligence.build_dataset_profile(
                     df,
                     dataset_type=dataset_type,
@@ -208,8 +218,6 @@ def _show_upload_tab():
                             }
                             
                             # Store dataset
-                            uploaded_file.seek(0)
-                            df = csv_handler.parse_csv(uploaded_file)
                             dataset_id = csv_handler.store_dataset(
                                 df,
                                 dataset_name,
@@ -314,6 +322,8 @@ def _display_dataset_card(dataset):
                     label = LABELS.get(key, key)
                     status = "[OK]" if info['available'] else "[N/A]"
                     st.markdown(f"{status} **{label}**: {info['reason']}")
+            if caps.get("data_dictionary"):
+                _display_data_dictionary(caps["data_dictionary"], expanded=False)
         elif not caps:
             # Dataset uploaded before this feature - show re-evaluate button
             if st.button("Evaluate Capabilities", key=f"eval_{dataset['id']}"):
@@ -424,6 +434,18 @@ def _display_profile_guidance(profile, key_prefix: str, compact: bool = False):
             if st.button(question, key=f"{key_prefix}_question_{idx}", use_container_width=True):
                 query_queue.queue_question(st.session_state, question)
                 st.success("Queued. Open Query Interface to review, edit, and run it.")
+
+
+def _display_data_dictionary(dictionary, expanded: bool = True):
+    """Display an inferred data dictionary in a compact table."""
+    if not dictionary:
+        return
+    with st.expander("Inferred Data Dictionary", expanded=expanded):
+        display_df = pd.DataFrame(dictionary)
+        st.dataframe(
+            display_df[["column", "type", "role", "missing_pct", "unique_count", "examples"]],
+            use_container_width=True,
+        )
 
 
 def _show_edit_metadata_form(dataset):

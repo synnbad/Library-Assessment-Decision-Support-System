@@ -95,7 +95,7 @@ from config.settings import Settings
 
 
 # Database schema version for migrations
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 # Retry configuration for database locks
 MAX_RETRIES = 5
@@ -357,6 +357,48 @@ def init_database(db_path: Optional[str] = None) -> None:
             FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE
         )
     """)
+
+    # Create assessment workflow tables
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS assessment_projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            status TEXT DEFAULT 'planned',
+            goal TEXT,
+            research_questions TEXT,
+            stakeholders TEXT,
+            methods TEXT,
+            dataset_ids TEXT,
+            findings TEXT,
+            recommendations TEXT,
+            due_date TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS dashboard_blueprints (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            audience TEXT,
+            user_story TEXT,
+            kpis TEXT,
+            dataset_ids TEXT,
+            visualizations TEXT,
+            status TEXT DEFAULT 'draft',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS training_materials (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            topic TEXT,
+            audience TEXT,
+            content_markdown TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     
     # Create indexes for performance
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_datasets_type ON datasets(dataset_type)")
@@ -373,6 +415,8 @@ def init_database(db_path: Optional[str] = None) -> None:
     cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_pinned_insights_idempotency ON pinned_insights(idempotency_key) WHERE idempotency_key IS NOT NULL")
     cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_reports_idempotency ON reports(idempotency_key) WHERE idempotency_key IS NOT NULL")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_idempotency_operation ON idempotency_keys(operation, status)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_assessment_projects_status ON assessment_projects(status)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_dashboard_blueprints_status ON dashboard_blueprints(status)")
     
     # Create application_logs table (centralized structured logging)
     cursor.execute("""
@@ -654,6 +698,51 @@ def migrate_database(db_path: Optional[str] = None) -> None:
                 cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_reports_idempotency ON reports(idempotency_key) WHERE idempotency_key IS NOT NULL")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_idempotency_operation ON idempotency_keys(operation, status)")
                 cursor.execute("INSERT OR IGNORE INTO schema_version (version) VALUES (5)")
+
+            if current_version < 6:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS assessment_projects (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT NOT NULL,
+                        status TEXT DEFAULT 'planned',
+                        goal TEXT,
+                        research_questions TEXT,
+                        stakeholders TEXT,
+                        methods TEXT,
+                        dataset_ids TEXT,
+                        findings TEXT,
+                        recommendations TEXT,
+                        due_date TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS dashboard_blueprints (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT NOT NULL,
+                        audience TEXT,
+                        user_story TEXT,
+                        kpis TEXT,
+                        dataset_ids TEXT,
+                        visualizations TEXT,
+                        status TEXT DEFAULT 'draft',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS training_materials (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT NOT NULL,
+                        topic TEXT,
+                        audience TEXT,
+                        content_markdown TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_assessment_projects_status ON assessment_projects(status)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_dashboard_blueprints_status ON dashboard_blueprints(status)")
+                cursor.execute("INSERT OR IGNORE INTO schema_version (version) VALUES (6)")
 
             print("Database migration completed")
         else:

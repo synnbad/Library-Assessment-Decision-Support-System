@@ -21,6 +21,7 @@ PAGE_REGISTRY = {
     "Qualitative Analysis": ("ui.qualitative_ui", "show_qualitative_analysis_page"),
     "Quantitative Analysis": ("ui.quantitative_ui", "show_quantitative_analysis_page"),
     "Visualizations": ("ui.visualization_ui", "show_visualizations_page"),
+    "Assessment Workspace": ("ui.assessment_workflow_ui", "show_assessment_workflow_page"),
     "Report Generation": ("ui.report_ui", "show_report_generation_page"),
     "Data Governance": ("ui.governance_ui", "show_data_governance_page"),
     "Logs & Monitoring": ("ui.logs_ui", "show_logs_page"),
