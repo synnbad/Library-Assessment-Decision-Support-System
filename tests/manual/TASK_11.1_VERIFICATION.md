@@ -193,7 +193,7 @@ The application properly integrates with `modules/auth.py` which provides:
 
 **Test Results:**
 ```
-11 passed in 1.38s
+historical targeted UI tests passed
 ```
 
 ## Manual Testing Instructions

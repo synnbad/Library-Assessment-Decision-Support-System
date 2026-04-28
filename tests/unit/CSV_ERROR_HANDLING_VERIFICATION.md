@@ -250,7 +250,7 @@ tests/unit/test_csv_error_handling.py::TestEdgeCases::test_csv_with_commas_in_qu
 tests/unit/test_csv_error_handling.py::TestEdgeCases::test_csv_with_extra_columns PASSED
 tests/unit/test_csv_error_handling.py::TestEdgeCases::test_csv_with_completely_empty_columns PASSED
 
-====================== 22 passed in 1.87s =======================
+====================== historical targeted CSV tests passed =======================
 ```
 
 ---

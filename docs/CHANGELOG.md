@@ -53,7 +53,7 @@ All notable changes to this project will be documented in this file.
   - Error message validation tests
   - Integration with query() method tests
 - All integration tests passing (7/7 for RAG-PII end-to-end)
-- Test coverage: ~75% across critical modules
+- Historical task-level coverage estimate; rerun coverage before reporting current numbers
 - No regressions in existing functionality
 
 ### Documentation
@@ -151,8 +151,8 @@ All notable changes to this project will be documented in this file.
 - Visualization integration
 - PDF and Markdown export
 
-#### Privacy & Compliance
-- FERPA compliant (local-only processing)
+#### Privacy And Governance
+- Privacy-conscious local processing
 - PII detection and redaction
 - FAIR data principles
 - CARE data principles
@@ -162,7 +162,7 @@ All notable changes to this project will be documented in this file.
 
 ## Version History
 
-**Current Status**: Production-ready (90% complete)
+**Current Status**: Prototype/workbench suitable for local demonstration, coursework, and portfolio review
 - Phase 1 (P0): 9/10 tasks complete
 - Phase 2 (P1): 0/9 tasks complete (planned)
 - Phase 3 (P2): 0/13 tasks complete (planned)
@@ -180,26 +180,26 @@ All notable changes to this project will be documented in this file.
 
 ## Deployment Readiness
 
-### Ready for Production ✅
-- Core functionality stable
-- Critical security issues resolved
-- Error handling robust
-- Testing comprehensive
-- Documentation complete
+### Suitable for local demonstration and pilot review
+- Core workflows are present
+- Local-first privacy design is documented
+- Error handling and test coverage continue to improve
+- Documentation is being aligned around the Library Assessment Decision Support System identity
 
-### Recommended Before Public Deployment
+### Recommended before institution-managed deployment
 - Complete Task 3.2 (NULL sentiment handling)
 - Complete Task 4.1 (Database integrity checks)
 - Complete Phase 2 (P1) reliability tasks
 - Set up production monitoring
 - Configure automated backups
 - Implement SSL/TLS
+- Complete institutional privacy, security, accessibility, and FERPA/legal review
 
 ### Suitable For
 - ✅ Internal deployment
 - ✅ Pilot programs
 - ✅ Development/staging environments
-- ⚠️ Public production (with Phase 2 completion recommended)
+- ⚠️ Public or institution-wide deployment only after additional governance hardening
 
 ---
 

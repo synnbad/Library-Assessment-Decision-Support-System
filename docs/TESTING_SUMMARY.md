@@ -129,7 +129,7 @@ To complete verification, perform manual testing of these features:
 
 ## Conclusion
 
-The repository rehabilitation refactor is **production-ready** with 92.5% test pass rate. The 4 failing tests are due to test data generation issues, not implementation bugs. All core functionality (RAG metrics, CSV handling for valid data, module imports) is verified and working correctly.
+The repository rehabilitation refactor was validated in its historical task context with a 92.5% test pass rate. Treat this as a dated note, not the current baseline; rerun the active suite before reporting present validation status.
 
 **Next Steps**: Perform manual UI testing and merge to main branch.
 
