@@ -1,5 +1,6 @@
-# FERPA-Compliant RAG Decision Support System - MVP
-# Python 3.13+ compatible dependency floor
+# Library Assessment Decision Support System - runtime and development dependencies
+# Supported Python: 3.10+
+# Development target: Python 3.13
 
 # Web Framework
 streamlit>=1.31.0
@@ -36,6 +37,7 @@ markdown>=3.5.2  # For Markdown export
 bcrypt>=4.1.2
 
 # Testing
+# Kept here for simple local setup. Optional dev dependencies are also listed in pyproject.toml.
 pytest>=8.0.0
 pytest-cov>=4.1.0
 hypothesis>=6.98.3  # Property-based testing

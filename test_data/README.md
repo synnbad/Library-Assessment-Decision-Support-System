@@ -1,6 +1,6 @@
 # Sample Test Data
 
-This directory contains sample CSV files for testing the FERPA-Compliant RAG Decision Support System. These files demonstrate the expected format for each dataset type and include various edge cases to test system robustness.
+This directory contains sample CSV files for testing the Library Assessment Decision Support System. These files demonstrate the expected format for each dataset type and include various edge cases to test system robustness.
 
 ## Files
 
@@ -216,7 +216,7 @@ This directory contains sample CSV files for testing the FERPA-Compliant RAG Dec
 - Values are realistic but not based on actual library data
 - Edge cases are intentionally included to test system robustness
 - No personally identifiable information (PII) is included
-- Data follows FERPA compliance guidelines (no student identifiers)
+- Data follows privacy-conscious governance guidelines (no student identifiers)
 
 ## Validation
 

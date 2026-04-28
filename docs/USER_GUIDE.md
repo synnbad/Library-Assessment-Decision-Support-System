@@ -27,7 +27,7 @@ The Library Assessment Decision Support System is an AI-augmented assessment too
 - **Report Generation**: Create comprehensive reports combining quantitative and qualitative insights
 - **Data Visualization**: Generate accessible charts (bar, line, pie, heatmaps, trend charts)
 - **Human-in-the-Loop**: All AI insights presented for human review and validation
-- **Privacy & Compliance**: FERPA-compliant with local-only processing, FAIR & CARE principles
+- **Privacy & Governance**: FERPA-conscious with local-only processing, FAIR & CARE principles
 
 ### Who Should Use This System
 
@@ -170,7 +170,7 @@ The application has a sidebar navigation menu with the following pages:
 
 - **🏠 Home**: Overview and quick start guide
 - **📤 Data Upload**: Upload CSV files and manage datasets
-- **💬 Query Interface**: Ask questions about your data in natural language
+- **💬 Ask**: Ask questions about your data in natural language
 - **📊 Qualitative Analysis**: Analyze sentiment and themes in survey responses
 - **📈 Visualizations**: Create charts from your data
 - **📄 Report Generation**: Generate comprehensive reports
@@ -355,13 +355,13 @@ The system implements FAIR (Findable, Accessible, Interoperable, Reusable) and C
 - Note any ethical considerations or privacy concerns
 - Update metadata when you perform analysis on the data
 
-### 2. Query Interface
+### 2. Ask
 
-The Query Interface allows you to ask questions about your data in natural language.
+The Ask page allows you to ask questions about your data in natural language.
 
-#### How to Use the Query Interface
+#### How to Use Ask
 
-1. **Navigate to Query Interface** using the sidebar menu
+1. **Navigate to Ask** using the sidebar menu
 2. **Type your question** in the text box (e.g., "What are the most common complaints in the survey responses?")
 3. **Press Enter or click "Send"**
 4. **View the answer** with citations to specific data sources
@@ -744,7 +744,7 @@ The system will show a progress indicator during generation.
 The Data Governance page provides information about:
 - FAIR principles implementation
 - CARE principles implementation
-- Data privacy and FERPA compliance
+- Data privacy and privacy-conscious governance
 - Ethical use guidelines
 - Access control and audit logging
 
@@ -758,7 +758,7 @@ This page is informational and helps you understand how the system protects your
 
 The Family Educational Rights and Privacy Act (FERPA) is a federal law that protects the privacy of student education records. Libraries that serve educational institutions must comply with FERPA when handling student data.
 
-### How This System Maintains FERPA Compliance
+### How This System Maintains Privacy-Conscious Local Processing
 
 1. **Local Processing Only**
    - All AI processing happens on your computer
@@ -976,7 +976,7 @@ The Family Educational Rights and Privacy Act (FERPA) is a federal law that prot
 - Or cancel and use the existing dataset
 - Check the upload date to identify the existing dataset
 
-### Query Interface Issues
+### Ask Issues
 
 #### Problem: "No relevant data found" for queries
 
@@ -1187,7 +1187,7 @@ A: The system is designed for library assessment data but can be adapted for sim
 
 A: 
 1. Upload your CSV data with metadata
-2. Use the Query Interface to explore your data
+2. Use the Ask to explore your data
 3. Run Qualitative Analysis on survey responses
 4. Create visualizations for key metrics
 5. Generate comprehensive reports
@@ -1203,7 +1203,7 @@ A: Yes, keeping historical data allows you to track trends over time. However, f
 
 **Q: Can I combine data from different sources?**
 
-A: Yes. Upload each source as a separate dataset. The Query Interface can search across all datasets. Reports can combine multiple datasets for comprehensive analysis.
+A: Yes. Upload each source as a separate dataset. The Ask can search across all datasets. Reports can combine multiple datasets for comprehensive analysis.
 
 ---
 
@@ -1248,7 +1248,7 @@ If you need assistance:
 
 ## Conclusion
 
-The FERPA-Compliant RAG Decision Support System is a powerful tool for library assessment that maintains strict data privacy standards. By processing everything locally, you can leverage AI capabilities while ensuring FERPA compliance.
+The Library Assessment Decision Support System is a powerful tool for library assessment that maintains privacy-conscious local processing practices. By processing everything locally, you can leverage AI capabilities while supporting privacy-conscious local processing.
 
 This system is designed to assist your work, not replace your professional judgment. Use it to:
 - Save time on data analysis

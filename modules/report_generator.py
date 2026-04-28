@@ -103,7 +103,7 @@ Usage Example:
     with open(f'report.{format_used}', 'wb') as f:
         f.write(content)
 
-Author: FERPA-Compliant RAG DSS Team
+Author: Library Assessment DSS Team
 """
 
 from typing import Dict, List, Optional, Any

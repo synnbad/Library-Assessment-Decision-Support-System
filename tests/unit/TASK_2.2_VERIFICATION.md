@@ -83,8 +83,8 @@ Comprehensive test suite with 21 tests covering:
 All 32 tests pass successfully:
 
 ```
-tests/unit/test_auth_rate_limiting.py: 21 passed
-tests/unit/test_streamlit_auth.py: 11 passed
+tests/unit/test_auth_rate_limiting.py: historical targeted rate-limiting tests passed
+tests/unit/test_streamlit_auth.py: historical targeted Streamlit auth tests passed
 ```
 
 ## Verification

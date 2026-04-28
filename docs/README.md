@@ -27,22 +27,29 @@ This directory contains project documentation for users, developers, reviewers, 
 - [NLP quick reference](NLP_QUICK_REFERENCE.md)
 - [Quantitative analysis proposal](QUANTITATIVE_ANALYSIS_PROPOSAL.md)
 
-## Project Reports and Historical Notes
+## Current Project Reports
 
 - [Project context](PROJECT_CONTEXT.md)
-- [Implementation summary](IMPLEMENTATION_SUMMARY.md)
-- [Final implementation report](FINAL_IMPLEMENTATION_REPORT.md)
 - [Library assessment system evaluation report](LIBRARY_ASSESSMENT_SYSTEM_EVALUATION_REPORT.md)
 - [Personal system report](PERSONAL_SYSTEM_REPORT.md)
 - [Testing summary](TESTING_SUMMARY.md)
+- [Project PDF](reports/Library_Assessment_Project.pdf)
+
+## Historical Notes
+
+The following documents are retained for project history and may describe older
+implementation phases, proposed enhancements, or legacy cleanup work. Treat the
+current README, architecture, testing, and design-record documents as authoritative.
+
+- [Implementation summary](IMPLEMENTATION_SUMMARY.md)
+- [Final implementation report](FINAL_IMPLEMENTATION_REPORT.md)
 - [Course project summary](COURSE_PROJECT_SUMMARY.md)
 - [AMIA project report](AMIA_PROJECT_REPORT_COMPLETE.md)
 - [Refactor audit summary](REFACTOR_AUDIT_SUMMARY.md)
 - [Refactor complete summary](REFACTOR_COMPLETE_SUMMARY.md)
 - [Merge summary archive](archive/MERGE_SUMMARY.md)
-- [Project PDF](reports/Library_Assessment_Project.pdf)
 
 ## Reference
 
 - [Reference architecture notes](reference/architecture.md)
-- [MVP requirements and design specs](specs/ferpa-compliant-rag-dss/requirements.md)
+- [Historical MVP requirements and design specs](specs/library-assessment-decision-support/requirements.md)

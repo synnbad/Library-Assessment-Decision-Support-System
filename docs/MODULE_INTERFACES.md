@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides a comprehensive reference for all module interfaces in the FERPA-Compliant RAG Decision Support System. Each module is documented with its purpose, key functions, parameters, return values, and usage examples.
+This document provides a comprehensive reference for all module interfaces in the Library Assessment Decision Support System. Each module is documented with its purpose, key functions, parameters, return values, and usage examples.
 
 ## Table of Contents
 
@@ -764,7 +764,7 @@ print(f"Created dataset with ID: {dataset_id}")
 ## pii_detector.py - Privacy Protection
 
 ### Purpose
-Detects and redacts PII to maintain FERPA compliance.
+Detects and redacts PII to support privacy-conscious local processing.
 
 ### Key Functions
 

@@ -2,7 +2,7 @@
 Authentication Module
 
 This module provides secure user authentication and session management for the
-FERPA-Compliant RAG Decision Support System.
+Library Assessment Decision Support System.
 
 Key Features:
 - Password-based authentication with bcrypt hashing
@@ -84,7 +84,7 @@ Usage Example:
     else:
         print(f"Session invalid: {error_msg}")
 
-Author: FERPA-Compliant RAG DSS Team
+Author: Library Assessment DSS Team
 """
 
 import bcrypt

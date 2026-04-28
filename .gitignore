@@ -69,6 +69,7 @@ data/processed/
 exports/
 reports/*.pdf
 reports/*.html
+docs/reports/system_evaluation_*/
 
 # Logs
 *.log

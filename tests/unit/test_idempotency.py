@@ -32,7 +32,7 @@ def test_idempotency_record_lifecycle(tmp_path, monkeypatch):
     assert cached["idempotency_reused"] is True
 
 
-def test_database_schema_version_six_adds_idempotency_and_workflow_tables(tmp_path):
+def test_database_schema_version_adds_idempotency_workflow_and_auth_tables(tmp_path):
     db_path = tmp_path / "schema.db"
     init_database(str(db_path))
     migrate_database(str(db_path))
@@ -52,7 +52,7 @@ def test_database_schema_version_six_adds_idempotency_and_workflow_tables(tmp_pa
     assert "assessment_projects" in tables
     assert "dashboard_blueprints" in tables
     assert "training_materials" in tables
-    assert version[0]["version"] == 6
+    assert version[0]["version"] == 7
     assert "idempotency_key" in {row["name"] for row in query_log_columns}
 
 

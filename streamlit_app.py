@@ -1,5 +1,5 @@
 """
-FERPA-Compliant RAG Decision Support System
+Library Assessment Decision Support System
 Main Streamlit Application
 
 This is the entry point for the library assessment AI system.

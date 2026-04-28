@@ -1,7 +1,7 @@
 """
 Database Module
 
-This module provides SQLite database management for the FERPA-Compliant RAG
+This module provides SQLite database management for the Library Assessment
 Decision Support System, including schema initialization, connection management,
 and query execution.
 
@@ -81,7 +81,7 @@ Schema Version:
 - Migration support for future schema changes
 - Version tracking in schema_version table
 
-Author: FERPA-Compliant RAG DSS Team
+Author: Library Assessment DSS Team
 """
 
 import sqlite3

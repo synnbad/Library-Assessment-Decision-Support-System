@@ -5,9 +5,10 @@ Last reviewed: 2026-04-19
 ## Current Policy
 
 The project currently uses broad lower-bound dependency ranges in `requirements.txt`
-and `pyproject.toml`. This keeps installation flexible on Python 3.13, but it also
-means new upstream releases can change runtime behavior without any code change in
-this repository.
+and `pyproject.toml`. The supported Python range is 3.10+, with Python 3.13 used as
+the current development target. Broad ranges keep installation flexible, but they
+also mean new upstream releases can change runtime behavior without any code change
+in this repository.
 
 Keep this policy only if every dependency update is followed by:
 
@@ -17,7 +18,7 @@ pytest
 
 The current verified baseline is:
 
-- Python: 3.13.5
+- Python: 3.13.5 (development target; supported range is 3.10+)
 - Streamlit: 1.52.2
 - ChromaDB: 1.5.7
 - sentence-transformers: 5.4.1

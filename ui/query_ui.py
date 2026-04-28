@@ -1,7 +1,7 @@
 """
-Query Interface UI Module
+Ask UI Module
 
-This module provides the RAG-powered natural language query interface.
+This module provides the RAG-powered Ask page.
 Includes chat functionality, conversation context management, and citation display.
 """
 
@@ -16,7 +16,7 @@ from modules import query_intelligence
 
 
 def show_query_interface_page():
-    """Display query interface page with chat interface and RAG functionality."""
+    """Display the Ask page with chat interface and RAG functionality."""
     st.title("Ask")
     st.markdown("Ask questions about your library data in natural language.")
     

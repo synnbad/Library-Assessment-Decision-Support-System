@@ -103,10 +103,10 @@ def test_query_interface_basic_structure():
     """
     from ui.query_ui import show_query_interface_page
 
-    # Verify the page registry points at the modularized query interface
+    # Verify the workflow registry points at the modularized Ask interface
     import streamlit_app
-    assert "Query Interface" in streamlit_app.PAGE_REGISTRY
-    assert streamlit_app.PAGE_REGISTRY["Query Interface"] == ("ui.query_ui", "show_query_interface_page")
+    assert "Ask" in streamlit_app.PAGE_REGISTRY
+    assert streamlit_app.PAGE_REGISTRY["Ask"] == ("ui.query_ui", "show_query_interface_page")
     assert callable(show_query_interface_page)
 
 

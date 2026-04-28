@@ -84,7 +84,7 @@ Requirements Implemented:
 - Evaluation result persistence
 - Historical tracking
 
-Author: FERPA-Compliant RAG DSS Team
+Author: Library Assessment DSS Team
 """
 
 from typing import List, Dict, Any, Set, Optional

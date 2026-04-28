@@ -1,7 +1,7 @@
 [project]
 name = "library-assessment-decision-support"
 version = "1.0.0"
-description = "A local-first, Streamlit-based AI assistant for library assessment that combines quantitative and qualitative analysis with natural language querying"
+description = "A local-first Streamlit application for small-team library assessment workflows"
 authors = [{name = "Library Assessment Team"}]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -50,9 +50,9 @@ addopts = "-v --strict-markers -p no:cacheprovider"
 
 [tool.black]
 line-length = 100
-target-version = ['py313']
+target-version = ['py310']
 include = '\.pyi?$'
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py310"

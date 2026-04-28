@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `pii_detector.py` module provides comprehensive PII (Personally Identifiable Information) detection and redaction capabilities to maintain FERPA compliance and protect student privacy in the FERPA-Compliant RAG Decision Support System.
+The `pii_detector.py` module provides comprehensive PII (Personally Identifiable Information) detection and redaction capabilities to support privacy-conscious local processing and protect student privacy in the Library Assessment Decision Support System.
 
 ## Features
 
@@ -231,4 +231,4 @@ Validates Requirement 6.5:
 
 ## License
 
-Part of the FERPA-Compliant RAG Decision Support System.
+Part of the Library Assessment Decision Support System.

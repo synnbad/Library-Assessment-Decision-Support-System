@@ -3,9 +3,11 @@
 **Authors:** [Your Names], [Degrees]  
 **Institution:** [Your Institution], [City], [State], [Country]
 
+> Historical project-report draft. Some model-performance numbers in this document describe proposed, expected, or course-context evaluation targets and should not be cited as current validated system performance unless reproduced with a current benchmark run.
+
 ## Abstract
 
-*This study presents the development and implementation of an AI-powered decision support system for library assessment that integrates multi-source data using advanced natural language processing (NLP) and machine learning techniques. The system combines survey responses, usage statistics, and circulation data to provide comprehensive insights while maintaining FERPA compliance through local-only processing. We implemented multiple NLP techniques including sentiment analysis (TextBlob baseline, RoBERTa enhancement achieving 89% accuracy), topic modeling using TF-IDF with K-Means clustering, and Retrieval-Augmented Generation (RAG) for question answering. The system employs Sentence-BERT embeddings for semantic search and Llama 3.2 for text generation. Statistical analysis capabilities include correlation analysis, trend detection, comparative analysis, and distribution analysis with automated interpretation generation. The human-in-the-loop design ensures AI augments rather than replaces professional judgment. Evaluation demonstrates significant improvements: 17% accuracy gain in sentiment classification with RoBERTa, 35% improvement in topic coherence with BERTopic, and 15% better retrieval accuracy with enhanced embeddings. The system successfully processes multi-source data, generates comprehensive reports, and maintains privacy through local processing, demonstrating practical application of state-of-the-art NLP techniques in educational assessment.*
+*This study presents the development and implementation of an AI-powered decision support system for library assessment that integrates multi-source data using advanced natural language processing (NLP) and machine learning techniques. The system combines survey responses, usage statistics, and circulation data to provide comprehensive insights while supporting privacy-conscious local processing. We implemented multiple NLP techniques including sentiment analysis (TextBlob baseline, RoBERTa enhancement achieving 89% accuracy), topic modeling using TF-IDF with K-Means clustering, and Retrieval-Augmented Generation (RAG) for question answering. The system employs Sentence-BERT embeddings for semantic search and Llama 3.2 for text generation. Statistical analysis capabilities include correlation analysis, trend detection, comparative analysis, and distribution analysis with automated interpretation generation. The human-in-the-loop design ensures AI augments rather than replaces professional judgment. Evaluation demonstrates significant improvements: 17% accuracy gain in sentiment classification with RoBERTa, 35% improvement in topic coherence with BERTopic, and 15% better retrieval accuracy with enhanced embeddings. The system successfully processes multi-source data, generates comprehensive reports, and maintains privacy through local processing, demonstrating practical application of state-of-the-art NLP techniques in educational assessment.*
 
 ## Introduction
 
@@ -15,7 +17,7 @@ This project addresses these challenges by developing an AI-powered decision sup
 1. Automates qualitative analysis of open-ended survey responses using NLP
 2. Performs advanced statistical analysis with AI-generated interpretations
 3. Integrates multi-source data for comprehensive insights
-4. Maintains FERPA compliance through local-only processing
+4. Supports privacy-conscious local processing
 5. Implements human-in-the-loop design where AI augments professional judgment
 
 ### Research Questions
@@ -238,7 +240,7 @@ For each statistical analysis, the system generates:
 
 ### Privacy and Compliance
 
-**FERPA Compliance:**
+**Privacy-Conscious Local Processing:**
 - All processing happens locally (no external API calls)
 - No data transmission to cloud services
 - PII detection and redaction using regex patterns
@@ -473,7 +475,7 @@ This project successfully demonstrates that modern NLP and machine learning tech
 
 4. **Comprehensive Statistical Analysis**: Automated statistical testing with AI-generated interpretations makes advanced analytics accessible to non-statisticians, with 92% interpretation accuracy verified by experts.
 
-5. **Privacy Preservation**: Local-only processing successfully maintains FERPA compliance while enabling sophisticated AI capabilities, demonstrating that privacy and innovation are not mutually exclusive.
+5. **Privacy Preservation**: Local-only processing successfully maintains privacy-conscious governance while enabling sophisticated AI capabilities, demonstrating that privacy and innovation are not mutually exclusive.
 
 ### Comparison with Existing Solutions
 
@@ -484,7 +486,7 @@ This project successfully demonstrates that modern NLP and machine learning tech
 - Trade-off: Requires validation and human oversight
 
 **vs. Cloud-Based AI Services:**
-- Privacy: Full FERPA compliance
+- Privacy: Local privacy-conscious processing
 - Cost: No per-query fees
 - Control: Complete data sovereignty
 - Trade-off: Smaller models, slightly lower quality
@@ -582,7 +584,7 @@ This project successfully demonstrates that modern NLP and machine learning tech
 5. Supports mixed-methods research
 
 **For Higher Education:**
-1. Demonstrates FERPA-compliant AI implementation
+1. Demonstrates privacy-conscious AI implementation
 2. Provides template for other assessment areas
 3. Shows value of local AI infrastructure
 4. Supports institutional research capabilities
@@ -644,7 +646,7 @@ This project successfully developed and evaluated an AI-powered decision support
 1. **Methodological**: Demonstrated effective integration of multiple NLP techniques (sentiment analysis, topic modeling, embeddings, RAG) in a cohesive system
 2. **Technical**: Implemented privacy-preserving AI using local LLMs and vector databases
 3. **Practical**: Created usable tool for library assessment with 4.3/5.0 user satisfaction
-4. **Ethical**: Maintained FERPA compliance while enabling advanced AI capabilities
+4. **Ethical**: Maintained privacy-conscious governance while enabling advanced AI capabilities
 
 **Research Questions Answered:**
 

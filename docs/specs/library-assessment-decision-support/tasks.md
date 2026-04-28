@@ -1,4 +1,4 @@
-# Implementation Plan: FERPA-Compliant RAG Decision Support System
+# Implementation Plan: Library Assessment Decision Support System
 
 ## Overview
 
@@ -435,6 +435,6 @@ The system incorporates FAIR (Findable, Accessible, Interoperable, Reusable) and
 - Property tests validate universal correctness properties with minimum 100 iterations using Hypothesis
 - Unit tests validate specific examples and edge cases
 - The implementation assumes Ollama is already installed and running locally
-- All data processing happens locally without external API calls to maintain FERPA compliance
+- All data processing happens locally without external API calls to support privacy-conscious local processing
 - The system implements FAIR and CARE principles through metadata tracking, data provenance, export capabilities, and ethical use documentation
 - The system is designed for single-user deployment on a laptop or desktop

@@ -30,7 +30,7 @@
 - Duplicate detection via file hash
 - Dataset management (view, edit, delete, export)
 
-### 3. Query Interface
+### 3. Ask
 - RAG-powered natural language queries
 - ChromaDB vector store for document retrieval
 - Ollama LLM integration for answer generation

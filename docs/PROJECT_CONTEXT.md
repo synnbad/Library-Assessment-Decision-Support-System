@@ -5,7 +5,7 @@
 **Name:** Library Assessment Decision Support System  
 **Type:** AI-powered data analysis and assessment tool  
 **Purpose:** Help library professionals analyze patron feedback, usage statistics, and circulation data using NLP and machine learning  
-**Status:** Production-ready MVP with enhanced features
+**Status:** Local-first prototype/workbench with enhanced features
 
 ## Quick Start for AI Agents
 
@@ -406,7 +406,7 @@ streamlit run streamlit_app.py
 - **v1.2** - Flexible data validation
 - **v1.3** - Metadata auto-fill feature
 - **v1.4** - Encoding detection and handling
-- **Current** - Production-ready with all features
+- **Current** - Submission-ready workbench with documented limitations
 
 ## Next Steps for AI Agents
 

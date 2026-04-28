@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design document specifies a simplified, single-application architecture for an AI-powered library assessment system suitable for a 4-6 week course project. The system provides natural language query capabilities, qualitative analysis, and basic reporting while maintaining FERPA compliance through local-only processing.
+This design document specifies a simplified, single-application architecture for an AI-powered library assessment system suitable for a 4-6 week course project. The system provides natural language query capabilities, qualitative analysis, and basic reporting while supporting privacy-conscious local processing.
 
 ### Core Design Principles
 
@@ -51,7 +51,7 @@ streamlit_app.py (main application)
 2. **Data Upload**: User uploads CSV files via Streamlit file uploader
 3. **Data Storage**: CSV data parsed and stored in SQLite
 4. **Vector Indexing**: Text data embedded and stored in ChromaDB
-5. **Query Interface**: Chat interface for natural language questions
+5. **Ask**: Chat interface for natural language questions
 6. **Analysis**: Qualitative analysis on demand
 7. **Reporting**: Generate reports with visualizations
 8. **Export**: Download reports as PDF/Markdown or charts as PNG
@@ -391,7 +391,7 @@ The system implements CARE principles for indigenous data governance and ethical
 - Data provenance tracks all transformations for accountability
 - Audit logging provides transparency of data access
 - PII detection and redaction protects individual privacy
-- FERPA compliance ensures student data protection
+- privacy-conscious governance ensures student data protection
 
 **Ethics**:
 - Data governance page explains ethical use principles
@@ -447,7 +447,7 @@ The system implements CARE principles for indigenous data governance and ethical
 ```json
 {
   "generated": "2024-01-15T15:00:00Z",
-  "system": "FERPA-Compliant RAG Decision Support System",
+  "system": "Library Assessment Decision Support System",
   "version": "1.0.0",
   "datasets": [
     {
@@ -615,7 +615,7 @@ import hypothesis.strategies as st
 @settings(max_examples=100)  # Minimum 100 iterations
 @given(...)
 def test_property_name(...):
-    """Feature: ferpa-compliant-rag-dss, Property N: [property text]"""
+    """Feature: library-assessment-decision-support, Property N: [property text]"""
     # Test implementation
 ```
 

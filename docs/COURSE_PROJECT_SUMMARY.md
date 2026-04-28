@@ -1,8 +1,12 @@
 # Course Project Summary: Library Assessment Decision Support System
 
+> Historical course-project summary. Model improvement percentages are retained as
+> proposed enhancement targets or course-context assumptions, not current validated
+> system metrics.
+
 ## Project Overview
 
-A comprehensive AI-powered decision support system for library assessment that combines multiple NLP techniques with a human-in-the-loop approach. The system processes multi-source data (surveys, usage statistics, circulation data) to provide actionable insights while maintaining FERPA compliance through local-only processing.
+A comprehensive AI-powered decision support system for library assessment that combines multiple NLP techniques with a human-in-the-loop approach. The system processes multi-source data (surveys, usage statistics, circulation data) to provide actionable insights while supporting privacy-conscious local processing.
 
 ---
 
@@ -57,7 +61,7 @@ A comprehensive AI-powered decision support system for library assessment that c
 ### 7. Named Entity Recognition (Pattern-Based)
 - **Technique**: Regex pattern matching
 - **Entities**: Email, phone, SSN, student IDs
-- **Purpose**: PII detection and redaction (FERPA compliance)
+- **Purpose**: PII detection and redaction (privacy-conscious governance)
 - **Location**: `modules/pii_detector.py`
 
 ### 8. Statistical Text Analysis
@@ -203,7 +207,7 @@ See `NLP_TECHNIQUES_AND_MODELS.md` for:
 
 ### 3. Privacy-First Architecture
 - All processing happens locally (no external APIs)
-- FERPA compliant by design
+- FERPA-conscious design consideration
 - PII detection and redaction
 - Audit logging for accountability
 
@@ -405,7 +409,7 @@ See `NLP_TECHNIQUES_AND_MODELS.md` for:
 ## Key Talking Points for Presentation
 
 1. **Multi-Source Integration**: Combines diverse data types for comprehensive insights
-2. **Privacy-First**: Local processing ensures FERPA compliance
+2. **Privacy-First**: Local processing ensures privacy-conscious governance
 3. **Human-in-the-Loop**: AI augments human decision-making
 4. **State-of-the-Art NLP**: RAG, embeddings, LLMs
 5. **Practical Impact**: Real-world application for libraries
@@ -445,7 +449,7 @@ See `NLP_TECHNIQUES_AND_MODELS.md` for:
 3. **Run App**: `streamlit run streamlit_app.py`
 4. **Upload Data**: Use sample data in `test_data/`
 5. **Try Features**:
-   - Query Interface: Ask questions
+   - Ask: Ask questions
    - Qualitative Analysis: Analyze sentiment and themes
    - Quantitative Analysis: Run statistical tests
    - Report Generation: Create comprehensive reports

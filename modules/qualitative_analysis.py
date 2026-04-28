@@ -82,7 +82,7 @@ Usage Example:
     summary = generate_summary(analysis_id)
     print(summary)
 
-Author: FERPA-Compliant RAG DSS Team
+Author: Library Assessment DSS Team
 """
 
 import pandas as pd

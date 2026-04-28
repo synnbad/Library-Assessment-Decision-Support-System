@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The current FERPA-Compliant RAG Decision Support System has strong **qualitative analysis** capabilities (sentiment analysis, theme identification) but limited **quantitative analysis** features. This proposal outlines how to add comprehensive quantitative analysis capabilities to complement the existing qualitative features.
+The current Library Assessment Decision Support System has strong **qualitative analysis** capabilities (sentiment analysis, theme identification) but limited **quantitative analysis** features. This proposal outlines how to add comprehensive quantitative analysis capabilities to complement the existing qualitative features.
 
 **Current State:**
 - ✅ Qualitative: Sentiment analysis, theme extraction, representative quotes

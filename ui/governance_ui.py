@@ -219,7 +219,7 @@ def _display_care_principles():
         - **Data Provenance Tracking**: Complete transparency about all transformations and analyses
         - **Audit Logging**: Every data access is logged for accountability
         - **PII Protection**: Automatic detection and redaction of personally identifiable information
-        - **FERPA Compliance**: Student data protection built into system design
+        - **Privacy-Conscious Local Processing**: Student data protection built into system design
         - **Citation Requirements**: All reports include citations showing data sources used
         
         **Example:** When you run qualitative analysis, the system records exactly what method 
@@ -235,7 +235,7 @@ def _display_care_principles():
         - **Privacy by Design**: Local-only processing ensures data never leaves your institution
         - **PII Redaction**: Automatic protection of personally identifiable information
         - **Ethical Use Documentation**: This page explains ethical principles and guidelines
-        - **FERPA Compliance**: Full compliance with student data privacy regulations
+        - **Privacy-Conscious Local Processing**: Local-first design that supports institutional privacy review
         - **No External APIs**: No data sent to external services or AI providers
         - **Informed Use**: Clear documentation of data collection and use purposes
         
@@ -356,7 +356,7 @@ def _display_privacy_protections():
         - No OpenAI, Google, or other external AI services
         
         **Benefits:**
-        - FERPA compliant by design
+        - FERPA-conscious design consideration
         - No internet required for processing
         - No subscription fees or API costs
         - Complete control over your data
@@ -371,7 +371,7 @@ def _display_privacy_protections():
         - PII detection in outputs
         - Redaction of sensitive data
         - Flagging of potential privacy issues
-        - FERPA compliance measures
+        - privacy-conscious governance measures
         
         **Protected Information:**
         - Email addresses
@@ -403,7 +403,7 @@ def _display_privacy_protections():
     - Details about what data was accessed
     
     **Use Cases:**
-    - Demonstrate FERPA compliance
+    - Demonstrate privacy-conscious governance
     - Investigate data access questions
     - Support institutional audits
     - Track data usage patterns

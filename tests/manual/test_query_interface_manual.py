@@ -1,13 +1,13 @@
 """
-Manual test for query interface functionality.
+Manual test for Ask functionality.
 
-This test verifies that the query interface page has all required components
+This test verifies that the Ask page has all required components
 as specified in task 11.3.
 
 To run this test:
 1. Start the Streamlit app: streamlit run streamlit_app.py
 2. Log in to the application
-3. Navigate to the Query Interface page
+3. Navigate to the Ask page
 4. Verify the following features:
 
 Required Features (Task 11.3):

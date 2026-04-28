@@ -1,26 +1,26 @@
 """
-Manual test for query interface page.
+Manual test for the Ask page.
 
-This test verifies that the query interface page can be loaded and displays
+This test verifies that the Ask page can be loaded and displays
 the expected components. Run this test manually by starting the Streamlit app
-and navigating to the Query Interface page.
+and navigating to the Ask page.
 
 Test Steps:
 1. Start Ollama: `ollama serve`
 2. Ensure model is available: `ollama pull llama3.2:3b`
 3. Start Streamlit app: `streamlit run streamlit_app.py`
 4. Log in with valid credentials
-5. Navigate to "💬 Query Interface" page
+5. Navigate to the Ask page
 6. Verify the following components are displayed:
-   - Title: "💬 Query Interface"
+   - Title: "Ask"
    - Ollama connection status (green if connected, red with instructions if not)
    - Conversation context indicator showing "0 turns" initially
    - "Clear Context" button
    - Model indicator showing "Llama 3.2"
    - Chat input box with placeholder text
-   - Help section with "How to use the Query Interface" expander
+   - Help section for using Ask
 7. Upload a test dataset in the Data Upload page first
-8. Return to Query Interface and ask a question
+8. Return to Ask and ask a question
 9. Verify:
    - User message appears in chat
    - Assistant response appears with answer
@@ -54,4 +54,4 @@ Requirements Validated:
 """
 
 # This is a manual test - no automated code needed
-# Follow the test steps above to verify the query interface functionality
+# Follow the test steps above to verify the Ask functionality

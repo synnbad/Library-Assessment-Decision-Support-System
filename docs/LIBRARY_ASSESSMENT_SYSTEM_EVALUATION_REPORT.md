@@ -729,63 +729,92 @@ demonstration outputs, and formally validated performance claims.
 10. Wolf T, Debut L, Sanh V, et al. Transformers: State-of-the-art natural
     language processing. EMNLP System Demonstrations. 2020.
 
-## Appendix A. Checklist Coverage
+## Appendix A. Evaluation Against Checklist
 
-### Data And Preprocessing
+This appendix evaluates the system directly against the checklist. The checklist is
+retained as report content, but each item is interpreted for a local-first library
+assessment decision-support system rather than a clinical predictive model.
 
-- [x] Data sources and cohort definition adapted to library assessment datasets
-- [x] Inclusion and exclusion criteria
-- [x] Missing data handling
-- [x] Feature engineering and normalization
+Status labels:
 
-### Dataset Characteristics
+- **Implemented:** Supported by the current system.
+- **Partially implemented:** Present, but needs stronger evaluation, UI support, or documentation.
+- **Future validation:** Requires a formal evaluation dataset or study protocol.
+- **Not applicable:** Not appropriate unless the system adds supervised predictive modeling.
 
-- [x] Sample size definition by dataset, row count, and analysis scope
-- [x] Class distribution and imbalance adapted to sentiment, themes, and categories
-- [x] Key variables adapted to library assessment data
-- [x] Train, validation, and test split explained as future supervised validation
+### 1. Data And Preprocessing
 
-### Modeling Approach
+| Checklist Item | System-Specific Evaluation | Metric Or Evidence | Status |
+|---|---|---|---|
+| Data source(s) and cohort definition | The system supports library assessment sources: surveys, usage statistics, circulation, e-resource, instruction, reference, spaces, events, collection, and benchmark data. The "cohort" is the selected dataset set used for a project, analysis, report, or Ask query scope. | Dataset inventory; dataset type; row count; source metadata; selected report/query scope. | Implemented |
+| Inclusion / exclusion criteria | Files are included when they are supported, parseable, valid for a known dataset type, not duplicates, and not blocked by PII/governance controls. Files or rows are excluded when malformed, unsupported, duplicate, archived, deleted, or privacy-blocked. | Import validation results; duplicate hash detection; PII review result; archive/delete state; import error logs. | Implemented |
+| Missing data handling | The system surfaces missing required columns, incomplete metadata, missing values, low-content text, and modeling-readiness gaps. Statistical workflows should describe missingness before interpretation. | Missing-field warnings; metadata readiness table; modeling-readiness checks; analysis limitations in reports. | Partially implemented |
+| Feature engineering / normalization | The system normalizes uploaded records into survey and usage-like tables, derives sentiment labels, extracts TF-IDF features, clusters themes, converts rows into text passages, and creates embeddings for retrieval. | Stored normalized records; generated sentiment fields; theme records; ChromaDB indexed passages; dataset profile output. | Implemented |
 
-- [x] Models and methods used
-- [x] Hyperparameter and configuration strategy
-- [x] Baseline versus advanced methods
-- [x] Temporal and scenario-based validation setup
+### 2. Dataset Characteristics
 
-### Evaluation Metrics
+| Checklist Item | System-Specific Evaluation | Metric Or Evidence | Status |
+|---|---|---|---|
+| Sample size (N) | N should be reported per dataset and per analysis. Relevant counts include number of datasets, rows, text responses, usage records, indexed passages, and records used in a report. | Dataset row count; analysis input count; number of indexed records; report data-source table. | Implemented |
+| Class distribution / imbalance | For this system, class distribution applies to sentiment categories, theme clusters, dataset types, patron/service/resource categories, and comparison groups. Imbalance matters when one group dominates interpretation. | Sentiment distribution; theme frequency; category counts; group sizes before comparisons. | Partially implemented |
+| Key variables (clinical, SDOH, etc.) | Clinical and SDOH variables are not the right frame. Key variables are response text, question, date, metric name, metric value, category, service/resource type, patron group when appropriate, and governance metadata. | Data dictionary; metadata fields; inferred column roles; dataset profile. | Implemented |
+| Train / validation / test split | The current system uses pre-trained NLP models, deterministic statistics, and retrieval rather than training a supervised outcome model. Splits become necessary for future sentiment benchmarking, retrieval benchmarking, or predictive modeling. | Future benchmark protocol with held-out labeled feedback, curated retrieval queries, and temporal splits for forecasting. | Future validation |
 
-- [x] Primary metrics by system component
-- [x] Calibration applicability explained
-- [x] Statistical tests and confidence intervals proposed
+### 3. Modeling Approach
 
-### Results And Interpretation
+| Checklist Item | System-Specific Evaluation | Metric Or Evidence | Status |
+|---|---|---|---|
+| Models used (e.g., LR, RF, XGBoost, LSTM) | The current system does not center on LR/RF/XGBoost/LSTM. It uses TextBlob sentiment, optional RoBERTa sentiment, TF-IDF + K-Means themes, sentence-transformer embeddings, ChromaDB retrieval, local Ollama/Llama generation, and deterministic statistical methods. | Module implementation; model configuration; dependency settings; generated analysis artifacts. | Implemented |
+| Hyperparameter tuning strategy | Relevant parameters include number of themes, TF-IDF max features, n-gram range, top-k retrieval, embedding model, chunk/passage construction, LLM model, temperature, and context size. These are configurable or implementation-level choices but need formal tuning records. | Configuration values; analysis parameters; validation results for alternative settings. | Partially implemented |
+| Baseline vs advanced models | Baselines include TextBlob for sentiment and TF-IDF + K-Means for themes. Advanced options include RoBERTa sentiment, BERTopic, stronger embeddings such as BGE, and future supervised/predictive models. | Comparative evaluation table: baseline vs advanced on the same labeled or curated data. | Partially implemented |
+| Temporal / cross-validation setup | Temporal validation applies to trend and forecasting workflows. Cross-validation applies only if supervised models are added. For current RAG and analysis workflows, scenario-based validation is more appropriate. | Time-based holdout for forecasting; curated scenario tests for Ask, retrieval, and reports. | Future validation |
 
-- [x] Implemented system capabilities
-- [x] Key technical and practical findings
-- [x] Feature importance reframed as future supervised-model need
+### 4. Evaluation Metrics
 
-### Error Analysis
+| Checklist Item | System-Specific Evaluation | Metric Or Evidence | Status |
+|---|---|---|---|
+| Primary metrics (AUC, Accuracy, F1) | AUC is not currently applicable unless a supervised classifier is added. Accuracy and F1 apply to sentiment if manually labeled feedback exists. RAG should use Precision@K, Recall@K, MRR, citation correctness, faithfulness, relevance, and completeness. Reports should use clarity, evidence traceability, and leadership usefulness ratings. | Sentiment test set; retrieval benchmark; human RAG rubric; report quality rubric; usability study. | Future validation |
+| Calibration (if applicable) | Calibration is not applicable to current retrieval, theme extraction, and narrative drafting. It becomes relevant only for future models that output probabilities used in decisions. | Calibration curve; Brier score; reliability diagram for future probability-producing models. | Not applicable |
+| Statistical tests / confidence intervals | Statistical tests are implemented for quantitative analysis workflows. Confidence intervals and paired statistical tests should be added to formal model/RAG evaluations. | p-values in quantitative analysis; bootstrap CIs for retrieval and sentiment metrics; inter-rater agreement for human ratings. | Partially implemented |
 
-- [x] Common failure modes
-- [x] Bias and subgroup performance
-- [x] Data and model limitations
-- [x] Edge cases and failure scenarios
+### 5. Results And Interpretation
 
-### Visualizations
+| Checklist Item | System-Specific Evaluation | Metric Or Evidence | Status |
+|---|---|---|---|
+| Best model performance | The current report should not claim best-model performance without a formal benchmark. Instead, it should report implemented model paths and define how best performance will be selected in future validation. | Future comparison: TextBlob vs RoBERTa; MiniLM vs BGE; TF-IDF/K-Means vs BERTopic; RAG top-k variants. | Future validation |
+| Key findings (clinical/technical) | Clinical findings are not applicable. Technical findings should focus on workflow readiness: successful import, metadata completeness, indexing readiness, retrieval behavior, statistical outputs, and report generation. Assessment findings should come from a specific dataset/project. | Demonstration report; dataset readiness metrics; sample Ask citations; analysis outputs. | Partially implemented |
+| Feature importance (e.g., SHAP) | SHAP is not relevant to the current system because there is no supervised predictive model. For current analysis, analogous evidence includes theme keywords, representative quotes, correlation pairs, trend slopes, and cited passages. | Theme keyword tables; quote tables; correlation heatmap; trend chart; citation table. | Not applicable now; future if predictive models are added |
 
-- [x] ROC and PR curves marked as future supervised-model artifacts
-- [x] Calibration plots marked as future predictive-model artifacts
-- [x] SHAP and feature importance marked as future supervised-model artifacts
-- [x] Current temporal, subgroup, correlation, distribution, theme, and sentiment visuals identified
+### 6. Error Analysis
 
-### Practical Impact
+| Checklist Item | System-Specific Evaluation | Metric Or Evidence | Status |
+|---|---|---|---|
+| Common misclassifications | For sentiment, misclassifications should be measured against manually labeled feedback. For retrieval, errors include irrelevant passages, missing relevant passages, weak citations, and answers that overgeneralize from limited evidence. | Confusion matrix; failed query log; retrieval adjudication; answer faithfulness review. | Future validation |
+| Bias / subgroup performance | Subgroup evaluation should focus on whether sentiment, retrieval, themes, and recommendations behave differently by privacy-safe categories such as service area, user group, resource type, or time period. | Stratified sentiment metrics; group-level retrieval quality; theme coverage by group; review of recommendation language. | Future validation |
+| Data or model limitations | The system should document sparse data, missing metadata, short text, ambiguous metric names, local model constraints, retrieval limits, and LLM narrative uncertainty. | Limitations section in reports; metadata readiness; low-confidence or insufficient-evidence labels. | Partially implemented |
+| Edge cases / failure scenarios | Edge cases include malformed files, duplicates, all-missing text, interrupted indexing, stale indexing status, archived datasets, unavailable Ollama, PII-heavy comments, and unsupported schemas. | Unit tests; integration tests; manual smoke tests; admin logs; error messages. | Partially implemented |
 
-- [x] How results can be used
-- [x] Thresholds for decision-making
-- [x] Comparison to current practice
+### 7. Visualizations
 
-### Limitations And Future Work
+| Checklist Item | System-Specific Evaluation | Metric Or Evidence | Status |
+|---|---|---|---|
+| ROC / PR curves | These are not applicable to current system behavior unless future supervised classifiers are added. For retrieval, PR-style evaluation can be adapted through Precision@K and Recall@K plots. | Future classifier benchmark; future retrieval benchmark curve. | Not applicable now |
+| Calibration plots | Not applicable unless future predictive models produce decision probabilities. | Future calibration curve and Brier score. | Not applicable now |
+| SHAP / feature importance plots | Not applicable to the current non-predictive workflow. The system should instead show evidence drivers: theme keywords, citations, correlations, and trend slopes. | Theme keyword chart; citation/evidence table; correlation heatmap; trend chart. | Not applicable now |
+| Temporal trends / subgroup plots | Highly applicable. The system supports trend analysis, comparison charts, distributions, and subgroup comparisons when the data contains appropriate date, group, and metric fields. | Trend line charts; comparison box plots; grouped bar charts; distribution charts. | Implemented |
 
-- [x] Data limitations
-- [x] Model limitations
-- [x] External validation plans
+### 8. Clinical / Practical Impact
+
+| Checklist Item | System-Specific Evaluation | Metric Or Evidence | Status |
+|---|---|---|---|
+| How results can be used | Results can support library planning, service improvement, resource allocation, space planning, collection decisions, instruction planning, leadership reporting, and assessment communication. | Leadership report; recommendations; cited Ask answers; analysis summaries. | Implemented |
+| Thresholds for decision-making | The system should support locally defined thresholds, such as minimum response count for a theme, minimum group size for comparison, significance threshold, retrieval citation threshold, and missingness threshold. | Documented report methods; configurable analysis settings; warning labels for insufficient evidence. | Partially implemented |
+| Comparison to current practice | The system should be evaluated against manual workflows: time to import, time to summarize themes, time to answer evidence questions, report completeness, and reviewer confidence. | Time-on-task study; user rubric; pre/post workflow comparison. | Future validation |
+
+### 9. Limitations And Future Work
+
+| Checklist Item | System-Specific Evaluation | Metric Or Evidence | Status |
+|---|---|---|---|
+| Data limitations | Library datasets can be sparse, inconsistent, small, biased toward respondents, missing metadata, or privacy-sensitive. The report should explicitly state these limits. | Dataset profile; missingness summary; metadata readiness; PII review. | Implemented |
+| Model limitations | TextBlob may miss context; TF-IDF/K-Means may produce shallow themes; embeddings may retrieve semantically plausible but weak evidence; local LLMs may draft incomplete or overconfident text. | Error analysis; human review; evidence confidence; model comparison study. | Implemented as documented limitation |
+| External validation plans | The next evaluation should use manually labeled feedback, curated RAG questions, expected citations, human report scoring, and multi-institution datasets where governance allows. | External validation protocol; benchmark dataset; held-out test set; human evaluator rubric. | Future validation |
