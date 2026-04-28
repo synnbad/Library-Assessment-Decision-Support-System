@@ -67,7 +67,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Previous Releases]
 
-### Phase 1: Critical Security & Data Integrity (Completed 90%)
+### Phase 1: Critical Security & Data Integrity (historical task tracker)
 
 #### Task 1: Data Integrity Issues ✅
 - **1.1**: Database-ChromaDB synchronization
@@ -112,7 +112,7 @@ All notable changes to this project will be documented in this file.
   - User ID and timestamp in session key
   - Session validation on each request
 
-#### Task 3: Cascading Failures (90% Complete)
+#### Task 3: Cascading Failures
 - **3.1**: Ollama crash handling ✅
   - ConnectionError detection in generate_answer()
   - 30-second timeout for Ollama requests
@@ -123,7 +123,7 @@ All notable changes to this project will be documented in this file.
   - Pending: Filter NULL sentiment before theme extraction
   - Minor edge case, low priority
 
-### Core Features (Stable)
+### Core Feature Areas
 
 #### Data Management
 - Multi-source data integration
@@ -178,28 +178,33 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## Deployment Readiness
+## Operational Readiness Notes
 
-### Suitable for local demonstration and pilot review
+### Suitable for local demonstration and review
 - Core workflows are present
 - Local-first privacy design is documented
 - Error handling and test coverage continue to improve
 - Documentation is being aligned around the Library Assessment Decision Support System identity
 
-### Recommended before institution-managed deployment
+### Needed before any institution-managed deployment
 - Complete Task 3.2 (NULL sentiment handling)
 - Complete Task 4.1 (Database integrity checks)
 - Complete Phase 2 (P1) reliability tasks
-- Set up production monitoring
+- Set up operational monitoring
 - Configure automated backups
 - Implement SSL/TLS
 - Complete institutional privacy, security, accessibility, and FERPA/legal review
 
 ### Suitable For
-- ✅ Internal deployment
-- ✅ Pilot programs
-- ✅ Development/staging environments
-- ⚠️ Public or institution-wide deployment only after additional governance hardening
+- Controlled local demonstration
+- Coursework and portfolio review
+- Development and staging experimentation
+- Pilot evaluation only after institutional privacy, security, accessibility, and FERPA/legal review
+
+### Not Yet Suitable For
+- Public deployment
+- Institution-wide deployment
+- Production handling of sensitive assessment data without additional governance hardening
 
 ---
 
