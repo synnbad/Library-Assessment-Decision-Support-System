@@ -43,7 +43,7 @@ Requirements Implemented:
 - 7.3: Document data provenance
 - 7.7: Generate data manifest
 
-Author: FERPA-Compliant RAG DSS Team
+Author: Library Assessment DSS Team
 """
 
 import pandas as pd
@@ -964,7 +964,7 @@ def generate_data_manifest() -> Dict[str, Any]:
     
     manifest = {
         "generated": datetime.now().isoformat(),
-        "system": "FERPA-Compliant RAG Decision Support System",
+        "system": "Library Assessment Decision Support System",
         "version": "1.0.0",
         "datasets": []
     }

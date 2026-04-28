@@ -1,5 +1,5 @@
 """
-Configuration settings for FERPA-Compliant RAG Decision Support System.
+Configuration settings for Library Assessment Decision Support System.
 
 This module provides centralized configuration management with support for
 environment variable overrides.

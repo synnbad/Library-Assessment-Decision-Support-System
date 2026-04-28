@@ -155,7 +155,7 @@ Testing Data Upload Page Workflow...
 
 9. Testing data manifest generation...
    ✓ Manifest generated with 1 datasets
-     - System: FERPA-Compliant RAG Decision Support System
+     - System: Library Assessment Decision Support System
      - Version: 1.0.0
 
 10. Testing dataset deletion...
@@ -192,7 +192,7 @@ All tests completed successfully! ✓
 ### Security & Compliance
 - ✅ Access logging for all operations
 - ✅ User authentication required
-- ✅ Local-only processing (FERPA compliant)
+- ✅ Local-only processing (FERPA-conscious)
 - ✅ Audit trail for data operations
 
 ## Conclusion

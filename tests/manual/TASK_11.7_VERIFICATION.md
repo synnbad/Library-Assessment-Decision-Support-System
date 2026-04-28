@@ -17,7 +17,7 @@ The data governance documentation page has been implemented in `streamlit_app.py
 - **Collective Benefit**: Library service improvement, usage notes, report generation
 - **Authority to Control**: User control over data, metadata editing, dataset deletion, local processing
 - **Responsibility**: Ethical considerations field, data provenance, audit logging, PII protection
-- **Ethics**: Privacy by design, PII redaction, FERPA compliance, no external APIs
+- **Ethics**: Privacy by design, PII redaction, privacy-conscious governance, no external APIs
 
 ### 3. Data Collection and Use
 - What data is collected (assessment data, system metadata, generated data)
@@ -161,7 +161,7 @@ streamlit run streamlit_app.py
 - Content is comprehensive but organized with expandable sections to avoid overwhelming users
 - Examples are provided throughout to make abstract principles concrete
 - Links to external resources support further learning
-- Page emphasizes the system's privacy-by-design approach and FERPA compliance
+- Page emphasizes the system's privacy-by-design approach and privacy-conscious governance
 
 ## Success Criteria
 

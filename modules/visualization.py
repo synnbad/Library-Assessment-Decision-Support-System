@@ -92,7 +92,7 @@ Usage Example:
     with open('chart.png', 'wb') as f:
         f.write(img_bytes)
 
-Author: FERPA-Compliant RAG DSS Team
+Author: Library Assessment DSS Team
 """
 
 import pandas as pd

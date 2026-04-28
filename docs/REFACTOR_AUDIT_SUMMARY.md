@@ -39,9 +39,9 @@ These files are part of the Library Assessment Decision Support System and shoul
 - `.kiro/specs/edge-case-hardening/bugfix.md` - Version control and IDE configuration
 - `.kiro/specs/edge-case-hardening/design.md` - Version control and IDE configuration
 - `.kiro/specs/edge-case-hardening/tasks.md` - Version control and IDE configuration
-- `.kiro/specs/ferpa-compliant-rag-dss/design.md` - Version control and IDE configuration
-- `.kiro/specs/ferpa-compliant-rag-dss/requirements.md` - Version control and IDE configuration
-- `.kiro/specs/ferpa-compliant-rag-dss/tasks.md` - Version control and IDE configuration
+- `.kiro/specs/library-assessment-decision-support/design.md` - Version control and IDE configuration
+- `.kiro/specs/library-assessment-decision-support/requirements.md` - Version control and IDE configuration
+- `.kiro/specs/library-assessment-decision-support/tasks.md` - Version control and IDE configuration
 - `.kiro/specs/repo-rehabilitation/design.md` - Version control and IDE configuration
 - `.kiro/specs/repo-rehabilitation/requirements.md` - Version control and IDE configuration
 - `.kiro/specs/repo-rehabilitation/tasks.md` - Version control and IDE configuration
@@ -191,7 +191,7 @@ These files may need updates or reclassification.
 - `pyproject.toml` - Project metadata (needs update for canonical identity)
 - `references/architecture.md` - Requires manual review
 - `requirements.txt` - Dependencies (needs cleanup)
-- `scripts/audit_repository.py` - Requires manual review
+- `scripts/audit_repository.py` - Historical audit tool removed after repo cleanup
 - `scripts/init_app.py` - Initialization script (may need updates)
 - `src/__init__.py` - Requires manual review
 - `src/services/__init__.py` - Requires manual review
@@ -34382,7 +34382,7 @@ These files may need updates or reclassification.
 
 **Name:** Library Assessment Decision Support System
 
-**Description:** A local-first, Streamlit-based AI assistant for library assessment that combines quantitative and qualitative analysis with natural language querying. All processing happens locally via Ollama for complete data privacy and FERPA compliance.
+**Description:** A local-first, Streamlit-based AI assistant for library assessment that combines quantitative and qualitative analysis with natural language querying. All processing happens locally via Ollama for complete data privacy and privacy-conscious governance.
 
 **Technology Stack:**
 - Web Framework: Streamlit

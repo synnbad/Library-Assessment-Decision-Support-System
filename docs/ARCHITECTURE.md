@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Library Assessment Decision Support System is a single-application Streamlit-based AI assistant for library assessment. It provides natural language query capabilities, qualitative and quantitative analysis, and report generation while maintaining FERPA compliance through local-only processing.
+The Library Assessment Decision Support System is a single-application Streamlit workbench for library assessment. It provides natural-language query capabilities, qualitative and quantitative analysis, and report generation while keeping core data in local or institution-controlled storage.
 
 **Key Design Principles:**
 
@@ -12,7 +12,7 @@ The Library Assessment Decision Support System is a single-application Streamlit
 - Manual data upload workflow
 - Human-in-the-loop decision making
 - Multi-source data integration
-- Minimal dependencies for MVP scope
+- Minimal dependencies for prototype/workbench scope
 
 ## Technology Stack
 
@@ -508,7 +508,7 @@ The Streamlit application is modularized into 10 UI components, each responsible
 
 
 #### 9. modules/pii_detector.py (Privacy Protection)
-**Purpose:** Detect and redact PII for FERPA compliance
+**Purpose:** Detect and redact PII for privacy-conscious governance
 
 **Key Functions:**
 - `detect_pii(text, patterns)` - Find PII instances
@@ -649,7 +649,7 @@ Download file
 - All data stored locally (SQLite + ChromaDB)
 - No external API calls
 - PII detection and redaction on outputs
-- FERPA compliance through local processing
+- privacy-conscious local processing through local processing
 
 ### Access Control
 - Simple role model: authenticated users have full access

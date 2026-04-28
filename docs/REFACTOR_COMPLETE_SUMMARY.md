@@ -251,7 +251,7 @@ tests/
 - **Property-Based Tests**: 4 properties, 400+ iterations
 - **Unit Tests**: 241 tests (existing)
 - **Integration Tests**: 7 tests (existing)
-- **Overall Coverage**: 75% across critical modules
+- **Overall Coverage**: historical estimate, not a current baseline
 
 ### Documentation
 - **README.md**: Updated with ui/ structure

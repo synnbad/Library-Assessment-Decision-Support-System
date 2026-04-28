@@ -2,7 +2,7 @@
 PII Detection and Redaction Module
 
 This module provides comprehensive PII detection and redaction capabilities to
-maintain FERPA compliance and protect student privacy in all system outputs.
+support privacy-conscious local processing and protect student privacy in all system outputs.
 
 Key Features:
 - Regex-based PII detection (email, phone, SSN, student ID)
@@ -37,7 +37,7 @@ Module Functions:
 
 Requirements Implemented:
 - 6.5: Detect and redact PII in outputs
-- FERPA compliance through privacy protection
+- privacy-conscious local processing through privacy protection
 
 Configuration (config/settings.py):
 - PII_PATTERNS: Dictionary of regex patterns for each PII type
@@ -85,7 +85,7 @@ Custom Patterns:
 - Pass custom patterns dict to any function
 - Useful for institution-specific identifiers
 
-Author: FERPA-Compliant RAG DSS Team
+Author: Library Assessment DSS Team
 """
 
 import re

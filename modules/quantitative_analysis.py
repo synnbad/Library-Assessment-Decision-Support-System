@@ -2,7 +2,7 @@
 Quantitative Analysis Module
 
 This module provides statistical analysis with LLM-powered interpretations for
-library data using local Ollama processing to maintain FERPA compliance.
+library data using local Ollama processing to support privacy-conscious local processing.
 
 Key Features:
 - Correlation analysis (Pearson, Spearman, Kendall)
@@ -13,7 +13,7 @@ Key Features:
 - Contextual insights about library data patterns
 - Actionable recommendations based on analysis results
 - PII redaction on all outputs
-- Local-only processing (FERPA compliant)
+- Local processing for privacy-conscious workflows
 
 Analysis Types:
 1. Correlation Analysis:
@@ -75,7 +75,7 @@ Requirements Implemented:
 - 5.1-5.7: Trend analysis
 - 6.1-6.7: Comparative analysis
 - 7.1-7.7: Distribution analysis
-- 10.1-10.7: FERPA compliance (local processing)
+- 10.1-10.7: privacy-conscious governance (local processing)
 - 11.1-11.7: Error handling
 - 13.1-13.7: Database storage
 
@@ -116,7 +116,7 @@ Usage Example:
         results=results
     )
 
-Author: FERPA-Compliant RAG DSS Team
+Author: Library Assessment DSS Team
 """
 
 import pandas as pd
@@ -1575,7 +1575,7 @@ def generate_interpretation(
     
     This function uses the local Ollama LLM to generate clear, professional narratives
     explaining statistical results in plain language. It applies PII redaction to all
-    outputs to maintain FERPA compliance. The function handles connection failures
+    outputs to support privacy-conscious local processing. The function handles connection failures
     gracefully and implements a timeout to prevent long-running operations.
     
     Args:
@@ -1707,7 +1707,7 @@ def generate_insights(
     library data (usage, survey, circulation). It analyzes the data to identify
     meaningful patterns, trends, and cross-dataset relationships, providing specific
     data points and statistics to support observations. All insights are PII-redacted
-    to maintain FERPA compliance.
+    to support privacy-conscious local processing.
     
     Args:
         dataset_id: ID of the dataset to analyze
@@ -2134,7 +2134,7 @@ def generate_recommendations(
     This function uses the local Ollama LLM to generate specific, actionable
     recommendations based on statistical analysis results. Recommendations are
     grounded in the analyzed data and tailored to the analysis type. All
-    recommendations are PII-redacted to maintain FERPA compliance.
+    recommendations are PII-redacted to support privacy-conscious local processing.
     
     Args:
         analysis_type: Type of analysis - 'correlation', 'trend', 'comparative', or 'distribution'

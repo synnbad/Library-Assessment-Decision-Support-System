@@ -93,7 +93,7 @@ Usage Example:
     print(f"Answer: {result['answer']}")
     print(f"Citations: {result['citations']}")
 
-Author: FERPA-Compliant RAG DSS Team
+Author: Library Assessment DSS Team
 """
 
 from datetime import datetime

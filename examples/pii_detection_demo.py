@@ -2,7 +2,7 @@
 PII Detection and Redaction Demo
 
 This script demonstrates the PII detection and redaction capabilities
-of the FERPA-Compliant RAG Decision Support System.
+of the Library Assessment Decision Support System.
 """
 
 from modules.pii_detector import (
@@ -127,7 +127,7 @@ def main():
     print("\n")
     print("=" * 60)
     print(" " * 10 + "PII Detection & Redaction Demo")
-    print(" " * 5 + "FERPA-Compliant RAG Decision Support System")
+    print(" " * 5 + "Library Assessment Decision Support System")
     print("=" * 60)
     
     demo_basic_detection()

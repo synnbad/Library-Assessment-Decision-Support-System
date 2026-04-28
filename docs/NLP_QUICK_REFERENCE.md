@@ -1,5 +1,9 @@
 # NLP Techniques Quick Reference Card
 
+> Quick reference for implementation and enhancement options. Any improvement
+> percentages are planning targets or literature/course-context estimates until
+> reproduced with this repository's current evaluation scripts and data.
+
 ## At-a-Glance: What's in Your System
 
 | Technique | Current Implementation | File Location | Enhancement Available |

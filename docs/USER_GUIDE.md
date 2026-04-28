@@ -27,7 +27,7 @@ The Library Assessment Decision Support System is an AI-augmented assessment too
 - **Report Generation**: Create comprehensive reports combining quantitative and qualitative insights
 - **Data Visualization**: Generate accessible charts (bar, line, pie, heatmaps, trend charts)
 - **Human-in-the-Loop**: All AI insights presented for human review and validation
-- **Privacy & Compliance**: FERPA-compliant with local-only processing, FAIR & CARE principles
+- **Privacy & Governance**: FERPA-conscious with local-only processing, FAIR & CARE principles
 
 ### Who Should Use This System
 
@@ -744,7 +744,7 @@ The system will show a progress indicator during generation.
 The Data Governance page provides information about:
 - FAIR principles implementation
 - CARE principles implementation
-- Data privacy and FERPA compliance
+- Data privacy and privacy-conscious governance
 - Ethical use guidelines
 - Access control and audit logging
 
@@ -758,7 +758,7 @@ This page is informational and helps you understand how the system protects your
 
 The Family Educational Rights and Privacy Act (FERPA) is a federal law that protects the privacy of student education records. Libraries that serve educational institutions must comply with FERPA when handling student data.
 
-### How This System Maintains FERPA Compliance
+### How This System Maintains Privacy-Conscious Local Processing
 
 1. **Local Processing Only**
    - All AI processing happens on your computer
@@ -1248,7 +1248,7 @@ If you need assistance:
 
 ## Conclusion
 
-The FERPA-Compliant RAG Decision Support System is a powerful tool for library assessment that maintains strict data privacy standards. By processing everything locally, you can leverage AI capabilities while ensuring FERPA compliance.
+The Library Assessment Decision Support System is a powerful tool for library assessment that maintains privacy-conscious local processing practices. By processing everything locally, you can leverage AI capabilities while supporting privacy-conscious local processing.
 
 This system is designed to assist your work, not replace your professional judgment. Use it to:
 - Save time on data analysis

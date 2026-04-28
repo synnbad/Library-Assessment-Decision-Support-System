@@ -1,2 +1,2 @@
-# FERPA-Compliant RAG Decision Support System
+# Library Assessment Decision Support System
 # Modules package
