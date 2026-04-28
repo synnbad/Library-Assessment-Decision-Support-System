@@ -1,12 +1,21 @@
 # Library Assessment Decision Support System
 
-A local-first Streamlit application for small-team library assessment workflows that supports dataset import, validation, qualitative and quantitative analysis, evidence-grounded question answering, reporting, and privacy-conscious governance.
+A local-first Streamlit application for small-team library assessment workflows that supports
+dataset import, validation, qualitative and quantitative analysis, evidence-grounded question
+answering, reporting, and privacy-conscious governance.
 
 ## Why This Project Matters
 
-Library assessment work often depends on scattered evidence: survey comments, usage statistics, circulation exports, event data, instruction records, reference logs, e-resource reports, and benchmark comparisons. Turning those files into clear findings for leadership can be slow, repetitive, and difficult to audit. This project provides a local assessment workbench that helps teams prepare data, analyze patterns, ask cited questions, and assemble reports while keeping human review at the center of the workflow.
+Library assessment work often depends on scattered evidence: survey comments, usage statistics,
+circulation exports, event data, instruction records, reference logs, e-resource reports, and
+benchmark comparisons. Turning those files into clear findings for leadership can be slow,
+repetitive, and difficult to audit. This project provides a local assessment workbench that helps
+teams prepare data, analyze patterns, ask cited questions, and assemble reports while keeping human
+review at the center of the workflow.
 
-The application is intended as a local-first prototype and portfolio-ready workbench. It is not an enterprise compliance platform and should not be treated as a substitute for institutional privacy, security, FERPA, accessibility, or legal review.
+The application is intended as a local-first prototype and portfolio-ready workbench. It is not an
+enterprise compliance platform and should not be treated as a substitute for institutional privacy,
+security, FERPA, accessibility, or legal review.
 
 ## Key Capabilities
 
@@ -30,9 +39,12 @@ The system is designed for local-first, privacy-conscious operation:
 - ChromaDB stores local retrieval indexes.
 - Ollama provides local LLM inference when available.
 - The default design avoids sending core assessment data to hosted AI services.
-- RAG answers, report narratives, and AI-generated recommendations should be reviewed by a human before leadership use.
+- RAG answers, report narratives, and AI-generated recommendations should be reviewed by a human
+  before leadership use.
 
-This project is FERPA-conscious, not a guarantee of FERPA compliance. Institutions remain responsible for their own policy review, access controls, retention rules, consent language, and legal interpretation.
+This project is FERPA-conscious, not a legal compliance guarantee. Institutions remain responsible
+for their own policy review, access controls, retention rules, consent language, and legal
+interpretation.
 
 ## Streamlit Workflow Overview
 
@@ -46,7 +58,8 @@ This project is FERPA-conscious, not a guarantee of FERPA compliance. Institutio
 
 ## Supported Data Imports
 
-The import UI accepts CSV, TSV, TXT, Excel `.xlsx`, and JSON files. Canonical CSV shapes remain the safest path for direct upload:
+The import UI accepts CSV, TSV, TXT, Excel `.xlsx`, and JSON files. Canonical CSV shapes remain the
+safest path for direct upload:
 
 | Dataset Type | Required Columns |
 |---|---|
@@ -67,7 +80,8 @@ The broader importer also supports common library assessment domains:
 - collection assessment data
 - peer, ACRL, ARL, IPEDS, or benchmark comparison data
 
-Sample CSV files are available in [test_data](test_data/README.md). Runtime databases, local vector stores, logs, exports, and generated evaluation runs are intentionally ignored by Git.
+Sample CSV files are available in [test_data](test_data/README.md). Runtime databases, local vector
+stores, logs, exports, and generated evaluation runs are intentionally ignored by Git.
 
 ## Repository Structure
 
@@ -79,7 +93,7 @@ Sample CSV files are available in [test_data](test_data/README.md). Runtime data
 |-- examples/            Small demonstration scripts
 |-- models/              Placeholder for local model artifacts
 |-- modules/             Core business logic, data, RAG, analysis, reports, logging
-|-- scripts/             Setup, audit, and utility scripts
+|-- scripts/             Setup and utility scripts
 |-- test_data/           Sample CSV files for manual testing and demos
 |-- tests/               Unit, integration, property, and manual smoke tests
 |-- ui/                  Streamlit page modules and shared UI helpers
@@ -96,7 +110,8 @@ Sample CSV files are available in [test_data](test_data/README.md). Runtime data
 - Recommended local model: `llama3.2:3b`
 - Recommended RAM: 16 GB or more
 
-Some workflows can run without Ollama, but Ask answers and LLM-generated narratives require the local Ollama service and model.
+Some workflows can run without Ollama, but Ask answers and LLM-generated narratives require the
+local Ollama service and model.
 
 ## Quick Start
 
@@ -125,7 +140,8 @@ username: admin
 password: admin123
 ```
 
-This credential is for local demo use only. Change it before importing real, sensitive, or institution-owned data. Do not expose the app on a public network with the default credential.
+This credential is for local demo use only. Change it before importing real, sensitive, or
+institution-owned data. Do not expose the app on a public network with the default credential.
 
 ## Configuration
 
@@ -144,7 +160,8 @@ LLM_GENERATION_TIMEOUT_SECONDS=90
 ENABLE_DEMO_LOGIN=false
 ```
 
-`EMBEDDING_LOCAL_FILES_ONLY=true` keeps embedding model loading local-first after the model is available on the workstation.
+`EMBEDDING_LOCAL_FILES_ONLY=true` keeps embedding model loading local-first after the model is
+available on the workstation.
 
 ## Testing And Validation
 
@@ -162,7 +179,9 @@ tests` passed, `python3 -m pytest` passed with 247 tests and one third-party
 ChromaDB deprecation warning under Python 3.14.4, and `python3 -m ruff check .`
 passed.
 
-The test suite includes unit, integration, property, and manual smoke-test materials. Some workflows depend on local services such as Ollama or a populated local database; failures should be interpreted with the reported dependency or service context.
+The test suite includes unit, integration, property, and manual smoke-test materials. Some workflows
+depend on local services such as Ollama or a populated local database; failures should be
+interpreted with the reported dependency or service context.
 
 See [docs/TESTING.md](docs/TESTING.md) for the latest validation notes and recommended commands.
 
@@ -174,7 +193,8 @@ See [docs/TESTING.md](docs/TESTING.md) for the latest validation notes and recom
 - RAG output and AI-generated report language should be human-reviewed before leadership use.
 - Local LLM quality and latency depend on workstation resources.
 - The app is not a live BI platform; dashboard features are currently planning and handoff aids.
-- Backup, restore, retention, and report approval workflows are design priorities but not yet complete enterprise controls.
+- Backup, restore, retention, and report approval workflows are design priorities but not yet
+  complete enterprise controls.
 
 ## Roadmap
 
@@ -198,14 +218,16 @@ The course/demo presentation deck is available at:
 docs/presentations/nlp_final_project_library_assessment_assistant.pptx
 ```
 
-Screenshots are not currently committed. Recommended screenshots for a portfolio submission:
+Screenshots are not currently committed. The table below identifies recommended demo assets for a
+portfolio showcase without implying that those assets already exist in the repository.
 
-- Home operational dashboard
-- Data import and indexing status
-- Analyze workflow
-- Ask response with citations
-- Reports workspace
-- Governance/Admin surfaces
+| Demo Asset | Status |
+|---|---|
+| Home dashboard screenshot | Recommended before portfolio showcase |
+| Data import and indexing screenshot | Recommended before portfolio showcase |
+| Ask response with citations screenshot | Recommended before portfolio showcase |
+| Report workspace screenshot | Recommended before portfolio showcase |
+| Governance/Admin screenshot | Recommended before portfolio showcase |
 
 ## Documentation
 
