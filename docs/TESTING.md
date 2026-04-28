@@ -93,9 +93,20 @@ pytest
 ruff check .
 ```
 
-Record the actual output in the pull request or submission notes. If a command
-cannot run in the local environment, report the exact reason instead of substituting
-old test counts.
+In the latest local validation, the `python` command was not available on PATH, so
+the commands were run with `python3` instead.
+
+```text
+Python: Python 3.14.4 in this environment; project policy remains Python 3.10+
+compileall: python3 -m compileall modules ui tests passed
+pytest: python3 -m pytest passed, 247 passed, 1 warning, 195.68s
+ruff: python3 -m ruff check . passed
+warning: ChromaDB emits a Python 3.14 deprecation warning for asyncio.iscoroutinefunction
+```
+
+Record the actual output in pull requests or submission notes. If a command cannot
+run in the local environment, report the exact reason instead of substituting old
+test counts.
 
 ## Manual Streamlit Smoke Check
 

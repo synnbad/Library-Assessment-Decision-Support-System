@@ -156,6 +156,12 @@ pytest
 ruff check .
 ```
 
+Latest local validation on 2026-04-28 used `python3` because `python` was not
+available on PATH in this environment. Results: `python3 -m compileall modules ui
+tests` passed, `python3 -m pytest` passed with 247 tests and one third-party
+ChromaDB deprecation warning under Python 3.14.4, and `python3 -m ruff check .`
+passed.
+
 The test suite includes unit, integration, property, and manual smoke-test materials. Some workflows depend on local services such as Ollama or a populated local database; failures should be interpreted with the reported dependency or service context.
 
 See [docs/TESTING.md](docs/TESTING.md) for the latest validation notes and recommended commands.

@@ -1,7 +1,7 @@
-# Task 11.3 Verification: Create Query Interface Page
+# Task 11.3 Verification: Create Ask Page
 
 ## Task Details
-- **Task**: 11.3 Create query interface page
+- **Task**: 11.3 Create Ask interface page
 - **Requirements**: 2.1, 2.2, 2.3, 2.5, 2.6
 - **Implementation Location**: `streamlit_app.py`, function `show_query_interface_page()`
 

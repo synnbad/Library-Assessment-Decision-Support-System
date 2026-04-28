@@ -35,7 +35,7 @@ The MVP focuses on essential features: manual data upload, RAG-powered question 
 6. THE Assessment_Assistant SHALL support multiple CSV uploads for different data types (surveys, usage statistics, circulation data)
 7. THE Assessment_Assistant SHALL allow the Assessment_Specialist to delete previously uploaded datasets
 
-### Requirement 2: Natural Language Query Interface with RAG
+### Requirement 2: Natural Language Ask Workflow with RAG
 
 **User Story:** As an Assessment Specialist, I want to ask questions in plain English about my library data and get accurate answers with citations, so that I can quickly find insights without writing queries or searching through spreadsheets.
 

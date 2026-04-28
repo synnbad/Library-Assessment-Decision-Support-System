@@ -160,7 +160,7 @@ Group 3: "books", "resources", "databases" → Collections theme
 - RAG: Grounds answers in your actual data
 - Provides citations for transparency
 
-**Use in system**: Query Interface feature
+**Use in system**: Ask feature
 
 ---
 

@@ -170,7 +170,7 @@ The application has a sidebar navigation menu with the following pages:
 
 - **🏠 Home**: Overview and quick start guide
 - **📤 Data Upload**: Upload CSV files and manage datasets
-- **💬 Query Interface**: Ask questions about your data in natural language
+- **💬 Ask**: Ask questions about your data in natural language
 - **📊 Qualitative Analysis**: Analyze sentiment and themes in survey responses
 - **📈 Visualizations**: Create charts from your data
 - **📄 Report Generation**: Generate comprehensive reports
@@ -355,13 +355,13 @@ The system implements FAIR (Findable, Accessible, Interoperable, Reusable) and C
 - Note any ethical considerations or privacy concerns
 - Update metadata when you perform analysis on the data
 
-### 2. Query Interface
+### 2. Ask
 
-The Query Interface allows you to ask questions about your data in natural language.
+The Ask page allows you to ask questions about your data in natural language.
 
-#### How to Use the Query Interface
+#### How to Use Ask
 
-1. **Navigate to Query Interface** using the sidebar menu
+1. **Navigate to Ask** using the sidebar menu
 2. **Type your question** in the text box (e.g., "What are the most common complaints in the survey responses?")
 3. **Press Enter or click "Send"**
 4. **View the answer** with citations to specific data sources
@@ -976,7 +976,7 @@ The Family Educational Rights and Privacy Act (FERPA) is a federal law that prot
 - Or cancel and use the existing dataset
 - Check the upload date to identify the existing dataset
 
-### Query Interface Issues
+### Ask Issues
 
 #### Problem: "No relevant data found" for queries
 
@@ -1187,7 +1187,7 @@ A: The system is designed for library assessment data but can be adapted for sim
 
 A: 
 1. Upload your CSV data with metadata
-2. Use the Query Interface to explore your data
+2. Use the Ask to explore your data
 3. Run Qualitative Analysis on survey responses
 4. Create visualizations for key metrics
 5. Generate comprehensive reports
@@ -1203,7 +1203,7 @@ A: Yes, keeping historical data allows you to track trends over time. However, f
 
 **Q: Can I combine data from different sources?**
 
-A: Yes. Upload each source as a separate dataset. The Query Interface can search across all datasets. Reports can combine multiple datasets for comprehensive analysis.
+A: Yes. Upload each source as a separate dataset. The Ask can search across all datasets. Reports can combine multiple datasets for comprehensive analysis.
 
 ---
 

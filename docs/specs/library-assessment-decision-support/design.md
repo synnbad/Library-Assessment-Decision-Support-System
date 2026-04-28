@@ -51,7 +51,7 @@ streamlit_app.py (main application)
 2. **Data Upload**: User uploads CSV files via Streamlit file uploader
 3. **Data Storage**: CSV data parsed and stored in SQLite
 4. **Vector Indexing**: Text data embedded and stored in ChromaDB
-5. **Query Interface**: Chat interface for natural language questions
+5. **Ask**: Chat interface for natural language questions
 6. **Analysis**: Qualitative analysis on demand
 7. **Reporting**: Generate reports with visualizations
 8. **Export**: Download reports as PDF/Markdown or charts as PNG

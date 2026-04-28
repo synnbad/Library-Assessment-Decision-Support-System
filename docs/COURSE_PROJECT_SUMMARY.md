@@ -449,7 +449,7 @@ See `NLP_TECHNIQUES_AND_MODELS.md` for:
 3. **Run App**: `streamlit run streamlit_app.py`
 4. **Upload Data**: Use sample data in `test_data/`
 5. **Try Features**:
-   - Query Interface: Ask questions
+   - Ask: Ask questions
    - Qualitative Analysis: Analyze sentiment and themes
    - Quantitative Analysis: Run statistical tests
    - Report Generation: Create comprehensive reports
